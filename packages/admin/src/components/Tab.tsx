@@ -3,6 +3,7 @@ import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { Tabs } from 'antd';
 import { useProjectStore } from '@/stores/projectStore';
+import { getPageId } from '@/utils/util';
 interface TabsItem {
   key: string;
   label: string;
@@ -18,7 +19,7 @@ function Tab() {
     },
   ]);
   const [activeKey, setActiveKey] = useState('');
-  const { pageId } = useParams();
+  const { projectId } = useParams();
   const { pathname } = useLocation();
   const pageMap = useProjectStore(useShallow((state) => state.pageMap));
 
@@ -27,21 +28,20 @@ function Tab() {
   }, [pathname, pageMap]);
   // 创建页签
   const addTabs = () => {
-    if (!pageId) {
-      setActiveKey('welcome');
-      return;
-    }
-    const menuItem = pageMap[Number(pageId)];
+    if (!projectId) return;
+    const pageId = pathname.split(projectId)[1].slice(1);
+    const id = getPageId(pageId, pageMap);
+    const menuItem = pageMap[Number(id)];
     if (!menuItem) return;
-    if (!tabsList.find((item) => item.key == pathname)) {
+    if (!tabsList.find((item) => item.key.includes(pathname))) {
       tabsList.push({
-        key: pathname,
+        key: pathname + location.search,
         label: menuItem.name,
         closable: true,
       });
     }
     setTabsList([...tabsList]);
-    setActiveKey(pathname);
+    setActiveKey(pathname + location.search);
   };
   // 删除页签
   const remove = (path: string) => {

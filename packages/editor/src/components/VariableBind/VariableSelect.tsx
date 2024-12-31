@@ -1,6 +1,6 @@
 import { Button, Collapse, Form, Modal, Popover, Tree } from 'antd';
 import type { CollapseProps } from 'antd';
-import { forwardRef, useCallback, useImperativeHandle, useState } from 'react';
+import { forwardRef, memo, useCallback, useImperativeHandle, useState } from 'react';
 import { DownOutlined, NotificationOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import { usePageStore } from '@/stores/pageStore';
 import VsEditor from '../VsEditor';
@@ -13,10 +13,10 @@ const SelectVariableModal = ({ onSelect }: { onSelect: (record: any) => void }, 
   const [form] = Form.useForm();
   const { variables, pageName, elements, elementsMap } = usePageStore((state) => {
     return {
-      variables: state.page.variables,
-      pageName: state.page.pageName,
-      elements: state.page.elements,
-      elementsMap: state.page.elementsMap,
+      variables: state.page.pageData.variables,
+      pageName: state.page.name,
+      elements: state.page.pageData.elements,
+      elementsMap: state.page.pageData.elementsMap,
     };
   });
 
@@ -27,11 +27,11 @@ const SelectVariableModal = ({ onSelect }: { onSelect: (record: any) => void }, 
   const getFormAndTable = useCallback(() => {
     const list: Array<{ id: string; name: string; elements: any[] }> = [];
     Object.keys(elementsMap).map((id) => {
-      if (id.startsWith('SearchForm_') || id.startsWith('Form_') || id.startsWith('MarsTable_')) {
+      if (id.startsWith('SearchForm_') || id.startsWith('Form_') || id.startsWith('GridForm_') || id.startsWith('MarsTable_')) {
         const { element }: any = getElement(cloneDeep(elements), id);
         if (!element) return;
         element.elements?.map((item: any) => {
-          const formItem = elementsMap[item.id].config.props.formItem;
+          const formItem = elementsMap[item.id]?.config.props.formItem;
           if (formItem) {
             item.name = `${formItem.label}(${formItem.name})`;
           } else {
@@ -46,7 +46,7 @@ const SelectVariableModal = ({ onSelect }: { onSelect: (record: any) => void }, 
       }
     });
     return list;
-  }, [elementsMap]);
+  }, [elementsMap, elements]);
 
   // 定义树形结构
   const treeData: any = [
@@ -54,6 +54,28 @@ const SelectVariableModal = ({ onSelect }: { onSelect: (record: any) => void }, 
       name: `页面【${pageName}】`,
       id: 'page',
       elements: [
+        {
+          name: '系统变量',
+          id: 'SystemVariable',
+          type: 'SystemVariable',
+          elements: [
+            {
+              type: 'Store',
+              id: 'userId',
+              name: 'userId',
+            },
+            {
+              type: 'Store',
+              id: 'nickName',
+              name: 'nickName',
+            },
+            {
+              type: 'Store',
+              id: 'userName',
+              name: 'userName',
+            },
+          ],
+        },
         {
           name: '全局变量',
           id: 'PageVariable',
@@ -141,6 +163,11 @@ const SelectVariableModal = ({ onSelect }: { onSelect: (record: any) => void }, 
     if (!node.type) return;
     const beforeExpression = form.getFieldValue('expression') ?? '';
 
+    // 选择系统存储变量
+    if (node.type === 'Store') {
+      form.setFieldValue('expression', `${beforeExpression} context.store.${node.id}`.trimStart());
+      return;
+    }
     // 选择页面全局变量
     if (node.type === 'Variable') {
       form.setFieldValue('expression', `${beforeExpression} context.variable.${node.id}`.trimStart());
@@ -271,4 +298,4 @@ const SelectVariableModal = ({ onSelect }: { onSelect: (record: any) => void }, 
   );
 };
 
-export default forwardRef(SelectVariableModal);
+export default memo(forwardRef(SelectVariableModal));

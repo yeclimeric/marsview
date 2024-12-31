@@ -9,6 +9,7 @@ import CreateUser from './CreateUser';
 import SearchForm from '../components/SearchForm';
 import { getUserList, getRoleListAll, delUser } from '@/api';
 import { QuestionCircleOutlined } from '@ant-design/icons';
+import BaseTable from '../components/BaseTable';
 
 /**
  * 用户配置
@@ -21,7 +22,7 @@ export default function MenuList() {
   const [roleList, setRoleList] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [form] = Form.useForm();
-  const project_id = useParams().id as string;
+  const projectId = useParams().id as string;
 
   const userRef = useRef<{
     open: (type: IAction, data?: UserItem) => void;
@@ -40,8 +41,8 @@ export default function MenuList() {
       const res = await getUserList({
         pageNum,
         pageSize: 10,
-        project_id: parseInt(project_id),
-        user_name: name,
+        projectId: parseInt(projectId),
+        userName: name,
       });
       setLoading(false);
       setTotal(res?.total || 0);
@@ -52,8 +53,8 @@ export default function MenuList() {
   };
 
   const getRoles = async () => {
-    const roleList = await getRoleListAll(parseInt(project_id));
-    setRoleList(roleList);
+    const roleList = await getRoleListAll(parseInt(projectId));
+    setRoleList(roleList || []);
   };
 
   // 分页事件
@@ -76,7 +77,7 @@ export default function MenuList() {
   const handleDelete = (record: UserItem) => {
     Modal.confirm({
       title: '确认',
-      content: `确认删除 ${record.user_name} 吗？`,
+      content: `确认删除 ${record.userName} 吗？`,
       onOk() {
         delUser({
           id: record.id,
@@ -91,32 +92,32 @@ export default function MenuList() {
   const columns: ColumnsType<UserItem> = [
     {
       title: '用户名称',
-      dataIndex: 'user_name',
-      key: 'user_name',
+      dataIndex: 'userName',
+      key: 'userName',
     },
     {
       title: '系统角色',
-      dataIndex: 'system_role',
+      dataIndex: 'systemRole',
       render(type) {
         return type === 1 ? '管理员' : '普通用户';
       },
     },
     {
       title: '角色列表',
-      dataIndex: 'role_id',
-      render(role_id) {
-        return roleList.find((item) => item.id === role_id)?.name;
+      dataIndex: 'roleId',
+      render(roleId) {
+        return roleList?.find((item) => item.id === roleId)?.name;
       },
     },
     {
       title: '更新时间',
-      dataIndex: 'updated_at',
-      key: 'updated_at',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
     },
     {
       title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
     },
     {
       title: '操作',
@@ -150,22 +151,23 @@ export default function MenuList() {
           <Input placeholder="用户名称" />
         </Form.Item>
       </SearchForm>
-      <div className="base-table">
-        <div className="header-wrapper">
+      <BaseTable
+        title={
           <Space>
             <span>用户列表</span>
             <Tooltip title="添加项目对应的用户，管理员默认具备该项目所有权限，普通用户可分配角色来精细化控制菜单和按钮。">
               <QuestionCircleOutlined />
             </Tooltip>
           </Space>
-          <div className="action">
-            <Button type="primary" onClick={handleCreate}>
-              新增
-            </Button>
-          </div>
-        </div>
+        }
+        action={
+          <Button type="primary" onClick={handleCreate}>
+            添加
+          </Button>
+        }
+      >
         <Table bordered rowKey="id" loading={loading} columns={columns} dataSource={list} pagination={pagination} />
-      </div>
+      </BaseTable>
       <CreateUser mRef={userRef} update={getList} />
     </div>
   );

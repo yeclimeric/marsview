@@ -34,7 +34,7 @@ export default {
   config: {
     // 组件默认属性值
     props: {
-      src: 'https://marsview.cdn.bcebos.com/s1.png',
+      src: `${import.meta.env.VITE_CDN_URL}/mars-logo.png`,
       preview: false,
       width: '200px',
       height: '200px',
@@ -46,7 +46,7 @@ export default {
   // 组件事件
   events: [
     {
-      value: 'handleClick',
+      value: 'onClick',
       name: '点击事件',
     },
   ],

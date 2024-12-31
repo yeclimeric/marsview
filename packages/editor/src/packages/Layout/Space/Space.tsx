@@ -1,6 +1,6 @@
 import { ComponentType, IDragTargetItem } from '@/packages/types';
 import { useDrop } from 'react-dnd';
-import * as Components from '@/packages/index';
+import { getComponent } from '@/packages/index';
 import { Material } from '@/packages/MarsRender/MarsRender';
 import { usePageStore } from '@/stores/pageStore';
 import { forwardRef, useImperativeHandle, useState } from 'react';
@@ -22,10 +22,10 @@ const MSpace = ({ id, type, config, elements }: ComponentType, ref: any) => {
   // 拖拽接收
   const [, drop] = useDrop({
     accept: 'MENU_ITEM',
-    drop(item: IDragTargetItem, monitor) {
+    async drop(item: IDragTargetItem, monitor) {
       if (monitor.didDrop()) return;
       // 生成默认配置
-      const { config, events, methods = [] }: any = Components[(item.type + 'Config') as keyof typeof Components] || {};
+      const { config, events, methods = [] }: any = (await getComponent(item.type + 'Config'))?.default || {};
       addChildElements({
         type: item.type,
         name: item.name,
@@ -56,15 +56,30 @@ const MSpace = ({ id, type, config, elements }: ComponentType, ref: any) => {
   });
   return (
     visible && (
-      <Space style={config.style} {...config.props} data-id={id} data-type={type} ref={drop}>
-        {elements?.length ? (
-          elements?.map((child) => <Material key={child.id} item={child} />)
+      // 是否开启紧凑模式
+      <>
+        {config.props.compact ? (
+          <Space.Compact style={config.style} {...config.props} data-id={id} data-type={type} ref={drop}>
+            {elements?.length ? (
+              elements?.map((child) => <Material key={child.id} item={child} />)
+            ) : (
+              <div className="slots" style={{ width: 300, height: 100, lineHeight: '100px' }}>
+                拖拽组件到这里
+              </div>
+            )}
+          </Space.Compact>
         ) : (
-          <div className="slots" style={{ width: 300, height: 100, lineHeight: '100px' }}>
-            拖拽组件到这里
-          </div>
+          <Space style={config.style} {...config.props} data-id={id} data-type={type} ref={drop}>
+            {elements?.length ? (
+              elements?.map((child) => <Material key={child.id} item={child} />)
+            ) : (
+              <div className="slots" style={{ width: 300, height: 100, lineHeight: '100px' }}>
+                拖拽组件到这里
+              </div>
+            )}
+          </Space>
         )}
-      </Space>
+      </>
     )
   );
 };

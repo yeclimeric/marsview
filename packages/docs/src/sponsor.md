@@ -8,16 +8,15 @@ Marsview 是一个开源的可视化搭建平台，采用 MIT 许可的开源项
 
 [爱发电，请给我喝杯咖啡](https://afdian.com/a/marsview)
 
-### 当前赞助者
+<img src="/pay.jpg"  width="300">
 
-| 名称            | 头像                                                           |
-| --------------- | -------------------------------------------------------------- |
-| 物联网方案-肖工 | <img src="http://docs.marsview.cc/sponsor/3.png"  width="50">  |
-| 🥕 二月贝弋 🥕  | <img src="http://docs.marsview.cc/sponsor/2.png"  width="50">  |
-| 猩猩点灯        | <img src="http://docs.marsview.cc/sponsor/1.png"  width="50">  |
-| 元次达          | <img src="http://docs.marsview.cc/sponsor/4.png"  width="50">  |
-| IoT-Fast        | <img src="http://docs.marsview.cc/sponsor/5.png"  width="50">  |
-| w10752842       | <img src="http://docs.marsview.cc/sponsor/6.png"  width="50">  |
-| 朱红宾          | <img src="http://docs.marsview.cc/sponsor/7.png"  width="50">  |
-| yangshare       | <img src="http://docs.marsview.cc/sponsor/8.jpeg"  width="50"> |
-| Joker6578       | <img src="http://docs.marsview.cc/sponsor/9.png"  width="50">  |
+### 金牌赞助者（一年）
+
+| 名称            | 头像                                                               |
+| --------------- | ------------------------------------------------------------------ |
+| 钢铁侠          | <img src="http://docs.marsview.com.cn/sponsor/10.png"  width="50"> |
+| 物联网方案-肖工 | <img src="http://docs.marsview.com.cn/sponsor/3.png"  width="50">  |
+
+### 广告位赞助
+
+等你加入！

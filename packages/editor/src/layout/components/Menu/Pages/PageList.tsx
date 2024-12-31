@@ -1,27 +1,28 @@
 import { Button, Flex, List, Spin, Tag } from 'antd';
 import { PlusOutlined, SyncOutlined, DeleteOutlined, EditOutlined } from '@ant-design/icons';
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { PageItem } from '@/api/pageMember';
-import { getPageList, delPageData } from '@/api';
+import api from '@/api/page';
 import { useNavigate } from 'react-router-dom';
 import { Modal, message } from '@/utils/AntdGlobal';
 import { usePageStore } from '@/stores/pageStore';
-import CreatePage from '@/components/CreatePage';
+import CreatePage, { CreatePageRef } from '@/components/CreatePage';
 /**
  * 编辑器中，快捷操作页面列表
  * 打开、修改、删除、新增页面
  */
-export default () => {
-  const createRef = useRef<{ open: (record?: PageItem) => void }>();
+export default memo(() => {
+  const createRef = useRef<CreatePageRef>();
   const [loading, setLoading] = useState(true);
   const [list, setList] = useState<PageItem[]>([]);
-  const pageId = usePageStore((state) => state.page.pageId);
-  const [total, setTotal] = useState<number>(0);
+  const { pageId, projectId } = usePageStore((state) => ({
+    pageId: state.page.id,
+    projectId: state.page.projectId,
+  }));
   const [pageNum, setPageNum] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(16);
   const [hasMore, setHasMore] = useState<boolean>(true);
   const [moreLoading, setMoreLoading] = useState<boolean>(false);
-
   const navigate = useNavigate();
   useEffect(() => {
     setLoading(true);
@@ -35,10 +36,10 @@ export default () => {
     } else {
       setLoading(true);
     }
-    const res = await getPageList({
+    const res = await api.getPageList({
       pageNum: current || pageNum,
       pageSize,
-      type: 1,
+      projectId,
     });
     setPageNum(current);
     setLoading(false);
@@ -53,9 +54,13 @@ export default () => {
     }
   };
 
-  // 新增用户
+  // 新增页面
   const handleAdd = (item?: PageItem) => {
-    createRef.current?.open(item);
+    if (item) {
+      createRef.current?.open('edit', item);
+    } else {
+      createRef.current?.open('create');
+    }
   };
 
   // 删除页面
@@ -66,7 +71,7 @@ export default () => {
       okText: '确认',
       cancelText: '取消',
       onOk: async () => {
-        await delPageData({
+        await api.delPageData({
           id,
         });
         message.success('删除成功');
@@ -84,7 +89,7 @@ export default () => {
 
   return (
     <>
-      <Flex justify="space-between" align="center" style={{ borderBottom: '1px solid #e8e9eb' }}>
+      <Flex justify="space-between" align="center" style={{ borderBottom: '1px solid var(--mars-theme-card-border-color)' }}>
         <Button type="link" icon={<PlusOutlined />} onClick={() => handleAdd()} style={{ marginLeft: -15 }}>
           新增
         </Button>
@@ -112,7 +117,7 @@ export default () => {
                     <EditOutlined onClick={() => handleAdd(item)} />,
                   ]}
                 >
-                  <List.Item.Meta title={<a onClick={(event) => handleOpen(event, item.id)}>{item.name}</a>} description={item.remark} />
+                  <List.Item.Meta title={<a onClick={(event) => handleOpen(event, item.id)}>{item.name}</a>} />
                 </List.Item>
               );
             }}
@@ -136,7 +141,6 @@ export default () => {
       </Spin>
       {/* 创建和修改页面 */}
       <CreatePage
-        title="修改页面"
         createRef={createRef}
         update={() => {
           getMyPagesList(1);
@@ -144,4 +148,4 @@ export default () => {
       />
     </>
   );
-};
+});

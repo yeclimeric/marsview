@@ -7,6 +7,7 @@ import storage from '@/utils/storage';
 import { usePageStore } from '@/stores/pageStore';
 import { LockOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons';
 import style from './index.module.less';
+
 type FieldType = {
   userName: string;
   code?: number;
@@ -17,13 +18,15 @@ export default function Login() {
   const [count, setCount] = useState(0);
   const [loading1, setLoading1] = useState(false);
   const [loading2, setLoading2] = useState(false);
+  const [status, setStatus] = useState(false);
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const saveUserInfo = usePageStore((state) => state.saveUserInfo);
 
   // 类型切换
-  const onChange = () => {
-    setType(type == 'login' ? 'regist' : 'login');
+  const onChange = (val: string) => {
+    setStatus(false);
+    setType(val);
     form.setFieldsValue({
       userName: '',
       userPwd: '',
@@ -55,7 +58,7 @@ export default function Login() {
     return () => clearTimeout(timer);
   }, [count]);
 
-  // 登录或注册
+  // 登录/注册/密码重置
   const onFinish: FormProps<FieldType>['onFinish'] = async (values: FieldType) => {
     setLoading2(true);
     try {
@@ -87,7 +90,7 @@ export default function Login() {
         <div className={style.form}>
           {type === 'login' ? (
             <div className={style.title}>
-              <img src="https://marsview.cdn.bcebos.com/mars-logo.png" width={45} />
+              <img src="/imgs/mars-logo.png" width={45} />
               <span>登录</span>
             </div>
           ) : (
@@ -117,18 +120,21 @@ export default function Login() {
               </Form.Item>
             )}
 
-            <Form.Item<FieldType> style={{ marginTop: 32 }} name="userPwd" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password prefix={<LockOutlined />} autoComplete="off" allowClear placeholder="请输入密码" />
-            </Form.Item>
+            {type !== 'reset' && (
+              <Form.Item<FieldType> style={{ marginTop: 32 }} name="userPwd" rules={[{ required: true, message: '请输入密码' }]}>
+                <Input.Password prefix={<LockOutlined />} autoComplete="off" allowClear placeholder="请输入密码" />
+              </Form.Item>
+            )}
 
             <Form.Item style={{ marginTop: 40 }}>
-              <Button type="primary" block htmlType="submit" loading={loading2}>
+              <Button type="primary" block htmlType="submit" loading={loading2} disabled={status}>
                 {type === 'login' ? '登录' : '注册'}
               </Button>
             </Form.Item>
             <Form.Item style={{ marginTop: 40 }}>
               <Flex justify="center" gap={20}>
-                <a onClick={onChange}>{type === 'login' ? '没有账号？去注册' : '已有账号？去登录'}</a>
+                <a onClick={() => onChange('login')}>{type === 'login' ? '' : '已有账号？去登录'}</a>
+                <a onClick={() => onChange('regist')}>{type === 'login' ? '没有账号？去注册' : ''}</a>
               </Flex>
             </Form.Item>
           </Form>

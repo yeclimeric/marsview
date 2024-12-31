@@ -3,11 +3,12 @@
  */
 
 import dayjs from 'dayjs';
-import { usePageStore } from '../stores/pageStore';
-import { ComponentType } from '../types';
+import { usePageStore } from '@materials/stores/pageStore';
+import { ComponentType } from '@materials/types';
 import { get } from 'lodash-es';
 import { cloneDeep } from 'lodash-es';
 import copy from 'copy-to-clipboard';
+import storage from './storage';
 
 /**
  * 生成ID
@@ -161,7 +162,7 @@ export function renderTemplate(template: string, data: any) {
         return key;
       }
     }
-    return get(data, key);
+    return get(data, key) || '';
   });
 }
 
@@ -169,7 +170,7 @@ export function renderTemplate(template: string, data: any) {
  * 获取页面变量
  */
 export function getPageVariable(name?: string) {
-  const pageStore = usePageStore.getState().page;
+  const pageStore = usePageStore.getState().page.pageData;
   const data: { [key: string]: any } = {};
   pageStore.variables.forEach((item) => {
     data[item.name] = pageStore.variableData[item.name] ?? item.defaultValue;
@@ -210,11 +211,14 @@ export function renderFormula(formula: string, eventParams?: any) {
     const formIds: Array<string> = formula.match(/([A-Za-z]+_\w+)\.[\w\.]*/g) || [];
     const originIds: Array<string> = [...new Set(formIds.map((id) => id.split('.')[0]))];
     const fnParams: Array<string> = ['context', 'eventParams'];
-    const pageStore = usePageStore.getState().page;
-    const formData = cloneDeep(pageStore.formData || {});
+    const {
+      page: { pageData },
+      userInfo,
+    } = usePageStore.getState();
+    const formData = cloneDeep(pageData.formData || {});
     originIds.forEach((id: string) => {
       // 如果绑定的是表单项，则通过Form实例对象获取对应表单值
-      const formValues = pageStore.formData?.[id] || {};
+      const formValues = pageData.formData?.[id] || {};
       if (!formData?.id) {
         formData[id] = formValues;
       }
@@ -226,6 +230,7 @@ export function renderFormula(formula: string, eventParams?: any) {
       return dayjs(date).format(fmt);
     };
     const context = {
+      store: userInfo,
       variable: variableData,
       eventParams,
       FORMAT,
@@ -241,48 +246,62 @@ export function renderFormula(formula: string, eventParams?: any) {
 }
 
 /**
- * 日期组件处理
+ * 递归查找日期组件
+ */
+export const getDateItem = (elements: ComponentType[], list: string[]): string[] => {
+  for (let i = 0; i < elements.length; i++) {
+    const item = elements[i];
+    if (['DatePicker', 'TimePicker', 'DatePickerRange', 'TimePickerRange', 'EditTable'].includes(item.type)) {
+      list.push(item.id);
+    } else if (item.elements?.length) {
+      getDateItem(item.elements, list);
+    }
+  }
+  return list;
+};
+
+/**
+ * 针对日期组件值做特殊处理，因为日期赋值必须转换为dayjs对象
  * @param list 组件列表
- * @param values 表单数据
- * @param type 处理类型，string: 字符串处理，date: 日期转换
+ * @param values 表单数据值
  */
 export const dateFormat = (list: Array<ComponentType>, values: any) => {
-  const elementsMap = usePageStore.getState().page.elementsMap;
-  list
-    .filter((item) => ['DatePicker', 'TimePicker', 'DatePickerRange', 'TimePickerRange', 'EditTable'].includes(item.type))
-    .map((item: any) => {
-      const {
-        startField,
-        endField,
-        formItem: { name },
-        formWrap: { format, columns },
-      } = elementsMap[item.id].config.props;
-      if (['DatePicker', 'TimePicker'].includes(item.type)) {
-        if (!values[name]) return;
-        values[name] = values[name]?.format?.(format) || dayjs(values[name]);
-      } else if (['DatePickerRange', 'TimePickerRange'].includes(item.type)) {
-        if (values[name]?.length == 2) {
-          const [start, end] = values[name]?.map((date: any) => date?.format?.(format) || dayjs(values[date])) || [undefined, undefined];
-          if (startField && endField) {
-            values[startField] = start;
-            values[endField] = end;
-            delete values[name];
-          }
-        } else {
-          if (values[startField] && values[endField]) {
-            values[name] = [dayjs(values[startField]), dayjs(values[endField])];
-          }
+  const elementsMap = usePageStore.getState().page.pageData.elementsMap;
+  const dates = getDateItem(list, []);
+  dates.map((id: string) => {
+    const { type, config } = elementsMap[id];
+    const {
+      startField,
+      endField,
+      formItem: { name },
+      formWrap: { format, columns },
+    } = config.props;
+    if (['DatePicker', 'TimePicker'].includes(type)) {
+      if (!values[name]) return;
+      values[name] = values[name]?.format?.(format) || dayjs(values[name]);
+    } else if (['DatePickerRange', 'TimePickerRange'].includes(type)) {
+      if (values[name]?.length == 2) {
+        const [start, end] = values[name]?.map((date: any) => date?.format?.(format) || dayjs(values[date])) || [undefined, undefined];
+        if (startField && endField) {
+          values[startField] = start;
+          values[endField] = end;
+          delete values[name];
         }
-      } else if (item.type === 'EditTable') {
-        columns
-          .filter((item: any) => item.type === 'date')
-          .map(({ dataIndex }: { dataIndex: string }) => {
-            values[name].map((item: any) => {
-              if (item[dataIndex]) item[dataIndex] = dayjs(item[dataIndex]);
-            });
-          });
+      } else {
+        if (values[startField] && values[endField]) {
+          values[name] = [dayjs(values[startField]), dayjs(values[endField])];
+        }
       }
-    });
+    } else if (type === 'EditTable') {
+      columns
+        .filter((item: any) => item.type === 'date')
+        .map(({ dataIndex }: { dataIndex: string }) => {
+          values[name].map((item: any) => {
+            if (item[dataIndex]) item[dataIndex] = dayjs(item[dataIndex]);
+          });
+        });
+    }
+  });
   return values;
 };
 
@@ -325,9 +344,9 @@ export const handleArrayVariable = (list: any = [], data: any = {}) => {
           // 解析模板语法
           const val: any = renderTemplate(next.value, data);
           // 数字转换
-          prev[next.key] = isNaN(val) ? val : Number(val);
+          prev[next.key] = isNotEmpty(val) ? (isNaN(val) ? val : Number(val)) : '';
         } else {
-          prev[next.key] = undefined;
+          prev[next.key] = '';
         }
       } else {
         if (next.value.type === 'static') {
@@ -335,14 +354,14 @@ export const handleArrayVariable = (list: any = [], data: any = {}) => {
             // 解析模板语法
             const val: any = renderTemplate(next.value.value, data);
             // 数字转换
-            prev[next.key] = isNaN(val) ? val : Number(val);
+            prev[next.key] = isNotEmpty(val) ? (isNaN(val) ? val : Number(val)) : '';
           } else {
-            prev[next.key] = undefined;
+            prev[next.key] = '';
           }
         } else {
           // 变量不支持模板字符串语法
           const result = renderFormula(next.value.value, data);
-          prev[next.key] = isNotEmpty(result) ? result : undefined;
+          prev[next.key] = isNotEmpty(result) ? result : '';
         }
       }
     }
@@ -393,25 +412,38 @@ export const loadScript = (src: string) => {
 
 /**
  * 获取环境变量
- * 1. vanEnv 当前项目环境
- * 2. isDev 是否是开发环境
- * 3. isPage 是否是页面环境
- * 4. isProject 是否是项目环境
+ * 开发环境默认返回 stg
+ * 页面打开，获取环境参数
+ * 项目打开，优先通过storage获取环境参数
  * 5. env 当前真实环境
  */
 export const getEnv = () => {
-  const vanEnv = document.documentElement.dataset?.vanEnv;
   const isDev = /^\/editor\/\d+\/edit/.test(location.pathname);
-  const isPage = /^\/page\/(stg|pre|prd)\/\d+/.test(location.pathname);
-  const isProject = /^\/project\/(stg|pre|prd)\/\d+/.test(location.pathname);
-  const result1 = location.pathname.match(/^\/page\/(stg|pre|prd)\/\d+/);
-  const result2 = location.pathname.match(/^\/project\/(stg|pre|prd)\/\d+/);
-  const env = (result1 ? result1[1] : result2 ? result2[1] : 'stg') as 'stg' | 'pre' | 'prd';
-  return {
-    vanEnv,
-    isDev,
-    isPage,
-    isProject,
-    env,
-  };
+  if (isDev) return 'stg';
+  const isPage = /^\/page\/\d+/.test(location.pathname);
+  if (isPage) {
+    const search = new URLSearchParams(location.search);
+    return search.get('env') || 'prd';
+  }
+  const match = location.pathname.match(/^\/project\/(\d+)\/(\d+)/);
+  if (match && match[1]) {
+    return storage.get(match[1] + '-env') || 'prd';
+  }
+  return 'prd';
 };
+
+/**
+ * 获取页面ID
+ * @param pageId 页面路径或者页面ID
+ * @param pageMap 菜单映射对象
+ * @returns
+ */
+export function getPageId(pageId: string | undefined, pageMap: Record<number, any>): number {
+  if (!pageId || !pageMap) return 0;
+  const id = isNaN(Number(pageId))
+    ? Object.values(pageMap).filter((item) => {
+        return item.path.startsWith('/') ? item.path.slice(1) === pageId : item.path === pageId;
+      })?.[0]?.pageId
+    : pageId;
+  return id;
+}

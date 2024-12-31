@@ -1,6 +1,6 @@
 import { Form, InputProps, FormItemProps } from 'antd';
 import { useDrop } from 'react-dnd';
-import * as Components from '@/packages/index';
+import { getComponent } from '@/packages/index';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { ComponentType, IDragTargetItem } from '@/packages/types';
 import { isNull } from '@/packages/utils/util';
@@ -23,26 +23,22 @@ export interface IConfig {
  */
 const MFormItem = ({ id, type, config, elements }: ComponentType<IConfig>, ref: any) => {
   const addChildElements = usePageStore((state) => state.addChildElements);
-  const { form, formId, setFormData } = useFormContext();
+  const { initValues } = useFormContext();
   const [visible, setVisible] = useState(true);
   // 初始化默认值
   useEffect(() => {
     const name: string = config.props.formItem?.name;
     const value = config.props.defaultValue;
-    // 日期组件初始化值
-    if (name && !isNull(value)) {
-      form?.setFieldValue(name, value);
-      setFormData({ name: formId, value: { [name]: value } });
-    }
+    initValues(type, name, value);
   }, [config.props.defaultValue]);
 
   // 拖拽接收
   const [, drop] = useDrop({
     accept: 'MENU_ITEM',
-    drop(item: IDragTargetItem, monitor) {
+    async drop(item: IDragTargetItem, monitor) {
       if (monitor.didDrop()) return;
       // 生成默认配置
-      const { config, events, methods = [] }: any = Components[(item.type + 'Config') as keyof typeof Components] || {};
+      const { config, events, methods = [] }: any = (await getComponent(item.type + 'Config'))?.default || {};
       addChildElements({
         type: item.type,
         name: item.name,

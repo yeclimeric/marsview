@@ -2,7 +2,7 @@
   "private": false,
   "name": "marsview",
   "description": "Marsview 是一款开源的低代码平台，面向中后台管理系统。支持可视化配置、逻辑编排、事件流交互、数据源配置等。",
-  "version": "4.7.2",
+  "version": "8.2.1",
   "license": "MIT",
   "author": {
     "name": "河畔一角",
@@ -23,16 +23,16 @@
   "scripts": {
     "preinstall": "npx only-allow pnpm",
     "start:editor": "pnpm --filter editor start",
-    "build:editor": "rm -rf dist/editor && pnpm --filter editor build",
-    "deploy:editor": "pnpm build:editor && cross-env PROJECT=editor node ./deploy.js",
+    "build:editor": "rimraf -rf dist/editor && pnpm --filter editor build",
+    "deploy:editor": "rimraf -rf dist/editor && pnpm build:editor && cross-env PROJECT=editor node ./deploy.js",
     "start:admin": "pnpm --filter admin start",
-    "build:admin": "rm -rf dist/admin && pnpm --filter admin build",
-    "deploy:admin": "pnpm build:admin && cross-env PROJECT=admin node ./deploy.js",
+    "build:admin": "rimraf -rf dist/admin && pnpm --filter admin build",
+    "deploy:admin": "rimraf -rf dist/admin && pnpm build:admin && cross-env PROJECT=admin node ./deploy.js",
     "start:docs": "pnpm --filter docs dev",
-    "build:docs": "rm -rf dist/docs && pnpm --filter docs build",
+    "build:docs": "rimraf -rf dist/docs && pnpm --filter docs build",
     "deploy:docs": "pnpm build:docs && cross-env PROJECT=docs node ./deploy.js",
-    "build": "rm -rf dist && pnpm --filter editor build && pnpm --filter admin build && pnpm --filter docs build",
-    "deploy": "pnpm build && cross-env PROJECT=all node ./deploy.js",
+    "build": "pnpm --filter editor build && pnpm --filter admin build && pnpm --filter docs build",
+    "deploy": "rimraf -rf dist && pnpm build && cross-env PROJECT=all node ./deploy.js",
     "prettier": "prettier --write '**/*.{js,jsx,tsx,ts,less,md,json}'",
     "release:major": "standard-version --release-as major",
     "release:minor": "standard-version --release-as minor",
@@ -69,11 +69,14 @@
     "less": "^4.2.0",
     "lodash-es": "^4.17.21",
     "qs": "^6.12.1",
-    "react": "latest",
-    "react-dom": "latest",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-error-boundary": "^4.0.13",
+    "react-json-view": "^1.21.3",
     "react-quill": "^2.0.0",
+    "react-responsive": "^10.0.0",
     "react-router-dom": "^6.21.2",
+    "rimraf": "^6.0.1",
     "standard-version": "^9.5.0",
     "styled-components": "^6.1.13",
     "vite": "^5.0.8",
@@ -83,8 +86,8 @@
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.7",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
     "cross-env": "^7.0.3",
     "lint-staged": "^10.0.7",
     "only-allow": "^1.2.1",
@@ -147,5 +150,11 @@
       }
     ],
     "scopes": []
+  },
+  "overrides": {
+    "react-json-view": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }

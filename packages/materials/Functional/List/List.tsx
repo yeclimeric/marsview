@@ -1,11 +1,11 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { Avatar, Button, List, Tag, ButtonProps } from 'antd';
 import * as icons from '@ant-design/icons';
-import { ComponentType } from '../../types';
-import { formatNumber, formatDate } from '../../utils/util';
-import { handleApi } from '../../utils/handleApi';
-import { handleActionFlow } from '../../utils/action';
-import { usePageStore } from '../../stores/pageStore';
+import { ComponentType } from '@materials/types';
+import { formatNumber, formatDate } from '@materials/utils/util';
+import { handleApi } from '@materials/utils/handleApi';
+import { handleActionFlow } from '@materials/utils/action';
+import { usePageStore } from '@materials/stores/pageStore';
 
 /*泛型只需要定义组件本身用到的属性*/
 export interface IConfig {
@@ -40,7 +40,7 @@ export interface IConfig {
 const MList = ({ config }: ComponentType<IConfig>, ref: any) => {
   const [data, setData] = useState<Array<any>>([]);
   const [visible, setVisible] = useState(true);
-  const variableData = usePageStore((state) => state.page.variableData);
+  const variableData = usePageStore((state) => state.page.pageData.variableData);
   useEffect(() => {
     getDataList({});
   }, [config.api, config.api?.sourceType == 'variable' ? variableData : '']);

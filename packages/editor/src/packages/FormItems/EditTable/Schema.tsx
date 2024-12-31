@@ -22,6 +22,11 @@ export default {
       name: ['formItem', 'name'],
     },
     {
+      type: 'Switch',
+      label: '无样式',
+      name: ['formItem', 'noStyle'],
+    },
+    {
       type: 'Input',
       label: 'Extra',
       name: ['formItem', 'extra'],
@@ -156,7 +161,7 @@ export default {
     events: [],
     api: {
       sourceType: 'json',
-      sourceField: 'list',
+      sourceField: 'data.list',
       // 数据源
       source: [],
     },

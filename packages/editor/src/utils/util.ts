@@ -88,7 +88,6 @@ export const parseStyle = (inputCss: string) => {
 export function getBoundingClientRect(element: any) {
   let offsetTop = 0;
   let offsetLeft = 0;
-  const scale = getScale();
   const { width, height } = element.getBoundingClientRect();
   while (element) {
     // 如果是顶级元素，则直接跳出循环
@@ -102,37 +101,11 @@ export function getBoundingClientRect(element: any) {
   }
 
   return {
-    width: width / scale,
-    height: height / scale,
+    width: width,
+    height: height,
     top: offsetTop,
     left: offsetLeft,
   };
-}
-
-// 获取当前画布缩放比例，用来计算选中元素的实际尺寸。
-function getScale() {
-  // 获取元素的最终计算样式
-  const style = window.getComputedStyle(document.querySelector('#editor') as HTMLElement);
-  // 获取transform属性的值
-  const transform = style.transform;
-
-  // 检查transform属性是否为空
-  if (!transform) {
-    return 1; // 如果没有变换，则假设缩放比例为1
-  }
-
-  // 尝试解析transform属性的值来找到缩放比例
-  // 注意：这个解析方法假设transform属性只包含scale变换，并且没有使用矩阵变换
-  const matrixValues = transform.match(/^matrix\(([^)]+)\)$/);
-  if (matrixValues) {
-    // 矩阵变换的值为：matrix(scaleX, skewY, skewX, scaleY, translateX, translateY)
-    // 但对于只包含scale的变换，它可能是matrix(scaleX, 0, 0, scaleY, 0, 0)
-    // 或者对于2D变换，它可能是matrix(scaleX, 0, 0, scaleY, 0, 0)的简化形式，如scale(scaleX, scaleY)
-    // 这里我们直接解析scaleX和scaleY
-    const matrixParts = matrixValues[1].split(', ').map(Number);
-    return matrixParts[0];
-  }
-  return 1;
 }
 
 /**
@@ -156,32 +129,17 @@ export function arrayToTree(array: Menu.MenuItem[], parentId = null) {
 
   // 找到每个节点的父节点
   array.forEach((item) => {
-    if (item.parent_id !== null && map[item.parent_id]) {
-      const parentItem = map[item.parent_id];
+    if (item.parentId !== null && map[item.parentId]) {
+      const parentItem = map[item.parentId];
       if (!parentItem.children) parentItem.children = [];
       parentItem.children?.push(map[item.id]);
-      // 按照sort_num进行降序排序
-      parentItem.children = parentItem.children.sort((a, b) => a.sort_num - b.sort_num);
+      // 按照sortNum进行降序排序
+      parentItem.children = parentItem.children.sort((a, b) => a.sortNum - b.sortNum);
     }
   });
   return Object.values(map)
-    .filter((item) => (parentId ? item.parent_id === parentId : !item.parent_id))
-    .sort((a, b) => a.sort_num - b.sort_num);
-}
-
-// 获取cookie
-export function getCookie(name: string) {
-  const cookies = document.cookie.split(';');
-  for (let i = 0; i < cookies.length; i++) {
-    const cookie = cookies[i].trim();
-    // Does this cookie string begin with the name we want?
-    if (cookie.startsWith(name + '=')) {
-      // Get the value of the cookie.
-      return decodeURIComponent(cookie.substring(name.length + 1));
-    }
-  }
-  // If there is no cookie with the specified name, return null.
-  return null;
+    .filter((item) => (parentId ? item.parentId === parentId : !item.parentId))
+    .sort((a, b) => a.sortNum - b.sortNum);
 }
 
 /**
@@ -201,6 +159,12 @@ export const loadScript = (src: string) => {
   });
 };
 
+/**
+ * 查找某组件的所有父元素类型
+ * @param id 组件ID
+ * @param elementsMap 所有组件映射对象
+ * @returns
+ */
 function findParentTypesById(id: string, elementsMap: { [id: string]: ComponentType }) {
   const types = [elementsMap[id].type];
   let parentItem = elementsMap[id];
@@ -217,7 +181,7 @@ function findParentTypesById(id: string, elementsMap: { [id: string]: ComponentT
  * 主要判断表单组件只能添加到Form或者SearchForm中
  */
 export const checkComponentType = (type: string, parentId: string = '', parentType: string = '', elementsMap: { [id: string]: ComponentType }) => {
-  const childFormList = components.find((item) => item.type === 'Form')?.data.map((item) => item.type);
+  const childFormList = components.find((item) => item.type === 'FormItems')?.data.map((item) => item.type);
   if (!parentType) {
     if (childFormList?.includes(type)) {
       return false;
@@ -226,7 +190,7 @@ export const checkComponentType = (type: string, parentId: string = '', parentTy
   } else {
     if (childFormList?.includes(type)) {
       const types = findParentTypesById(parentId, elementsMap);
-      if (types.includes('Form') || types.includes('SearchForm')) return true;
+      if (types.includes('Form') || types.includes('SearchForm') || types.includes('GridForm')) return true;
       return false;
     }
   }
@@ -235,6 +199,7 @@ export const checkComponentType = (type: string, parentId: string = '', parentTy
 
 /**
  * 文件导出
+ * 由于只支持https协议，所以当前在http下不可用。
  */
 export async function saveFile(name: string, content: string) {
   try {
@@ -265,4 +230,38 @@ export async function saveFile(name: string, content: string) {
     console.error(error);
     return false;
   }
+}
+
+/**
+ *
+ * @param children 组件树
+ * @param nodeId 节点id
+ * @param parentNode 父节点
+ * @returns {
+ * index: number, // 节点在父节点中的索引
+ * parentNode: any, // 父节点
+ * selfNode: any // 当前节点
+ * }
+ */
+export function findNodeIndexAndParent(
+  children: any,
+  nodeId: string,
+  parentNode = null,
+): {
+  index: number;
+  parentNode: any;
+  selfNode: any;
+} | null {
+  for (let i = 0; i < children.length; i++) {
+    if (children[i].id === nodeId) {
+      return { index: i, parentNode, selfNode: children[i] };
+    }
+    if (children[i].children) {
+      const result = findNodeIndexAndParent(children[i].children, nodeId, children[i]);
+      if (result) {
+        return result;
+      }
+    }
+  }
+  return null;
 }

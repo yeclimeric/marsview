@@ -10,7 +10,7 @@ export const router = [
     element: lazyLoad(React.lazy(() => import('@/pages/console'))),
   },
   {
-    path: '/page/:env/:id',
+    path: '/page/:id',
     element: lazyLoad(React.lazy(() => import('@/pages/page'))),
   },
   {
@@ -18,7 +18,7 @@ export const router = [
     element: lazyLoad(React.lazy(() => import('@/pages/login/Login'))),
   },
   {
-    path: '/project/:env/:projectId',
+    path: '/project/:projectId',
     loader: AuthLoader,
     element: lazyLoad(React.lazy(() => import('@/layout/layout'))),
     children: [
@@ -27,16 +27,12 @@ export const router = [
         element: lazyLoad(React.lazy(() => import('@/pages/welcome/welcome'))),
       },
       {
-        path: ':pageId',
-        element: lazyLoad(React.lazy(() => import('@/pages/project'))),
-      },
-      {
         path: 'notPublish',
         element: lazyLoad(React.lazy(() => import('@/pages/500'))),
       },
       {
         path: '*',
-        element: lazyLoad(React.lazy(() => import('@/pages/project/notFound'))),
+        element: lazyLoad(React.lazy(() => import('@/pages/project'))),
       },
     ],
   },

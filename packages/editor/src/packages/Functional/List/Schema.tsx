@@ -12,6 +12,17 @@ export default {
       key: 'basic',
     },
     {
+      type: 'Select',
+      label: '布局',
+      name: 'itemLayout',
+      props: {
+        options: [
+          { label: '横向', value: 'horizontal' },
+          { label: '纵向', value: 'vertical' },
+        ],
+      },
+    },
+    {
       type: 'Input',
       label: '头部标题',
       name: 'header',
@@ -62,6 +73,17 @@ export default {
       type: 'ColorPicker',
       label: '标题颜色',
       name: ['title', 'color'],
+    },
+    {
+      type: 'Switch',
+      label: '使用图标',
+      name: ['useIcon'],
+    },
+    {
+      type: 'Input',
+      label: '图标字段',
+      name: ['icon'],
+      tooltip: '开启图标后，接口可返回Antd的图标名称，用来替换头像',
     },
     {
       type: 'Input',
@@ -120,6 +142,7 @@ export default {
       size: 'default',
       bordered: false,
       split: true,
+      itemLayout: 'horizontal',
       header: '列表标题',
       footer: '列表底部',
       avatar: 'avatar',
@@ -137,6 +160,8 @@ export default {
         type: 'money',
       },
       bulkActionList: [],
+      useIcon: false,
+      icon: 'icon',
     },
     style: {
       padding: '20px',
@@ -150,21 +175,21 @@ export default {
           id: 1,
           name: '上海分店',
           remark: '20%利润',
-          avatar: 'https://marsview.cdn.bcebos.com/s1.png',
+          avatar: `${import.meta.env.VITE_CDN_URL}/s1.png`,
           content: '12423',
         },
         {
           id: 2,
           name: '深圳分店',
           remark: '70%利润',
-          avatar: 'https://marsview.cdn.bcebos.com/s1.png',
+          avatar: `${import.meta.env.VITE_CDN_URL}/s1.png`,
           content: '10999',
         },
         {
           id: 3,
           name: '北京分店',
           remark: '35%利润',
-          avatar: 'https://marsview.cdn.bcebos.com/s1.png',
+          avatar: `${import.meta.env.VITE_CDN_URL}/s1.png`,
           content: '30999',
         },
       ],

@@ -1,7 +1,7 @@
 import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import * as icons from '@ant-design/icons';
 import AuthButton from './AuthButton';
-import { ComponentType } from '../../types';
+import { ComponentType } from '@materials/types';
 /*泛型只需要定义组件本身用到的属性*/
 export interface IConfig {
   icon: string;
@@ -15,7 +15,7 @@ export interface IConfig {
  */
 const MButton = ({ id, type, config, onClick }: ComponentType<IConfig>, ref: any) => {
   const [visible, setVisible] = useState(true);
-  const [disabled, setDisabled] = useState(false);
+  const [disabled, setDisabled] = useState<boolean | undefined>();
   const [loading, setLoading] = useState(false);
   // 对外暴露方法
   useImperativeHandle(ref, () => {
@@ -41,7 +41,7 @@ const MButton = ({ id, type, config, onClick }: ComponentType<IConfig>, ref: any
     };
   });
   const handleClick = () => {
-    onClick && onClick();
+    onClick?.();
   };
   const iconsList: { [key: string]: any } = icons;
   return (

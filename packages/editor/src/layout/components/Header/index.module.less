@@ -1,22 +1,20 @@
-.header {
+.header,
+.layoutHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 30px;
-  background-color: #fff;
+  background-color: var(--mars-theme-color);
   height: 64px;
   line-height: 64px;
   padding: 0 20px;
   font-size: 14px;
-}
-.homeHeader {
-  &:extend(.header);
-  box-shadow: 0 4px 6px #0000000d;
+  color: var(--mars-theme-text-color);
 }
 .layoutHeader {
-  &:extend(.header);
-  border-bottom: 1px solid @border-color;
+  border-bottom: 1px solid var(--mars-theme-border-color);
 }
+
 .logo {
   font-size: 20px;
   display: flex;
@@ -57,17 +55,20 @@
         color: #7d33ff;
         font-weight: 500;
       }
-      img {
+      img,
+      svg {
         transition: all 0.2s linear;
       }
       &:hover {
-        img {
+        img,
+        svg {
           margin-top: -30px;
         }
       }
     }
   }
-  img {
+  img,
+  svg {
     width: 30px;
     vertical-align: middle;
   }
@@ -79,11 +80,39 @@
   .avatar {
     display: flex;
     align-items: center;
+    cursor: pointer;
   }
 }
 .github {
-  vertical-align: middle;
+  vertical-align: sub;
 }
 .publishPopover {
   padding: 20px;
+  width: 100%;
+}
+
+.githubCorner:hover .octoArm {
+  animation: octocat-wave 560ms ease-in-out;
+}
+@keyframes octocat-wave {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  20%,
+  60% {
+    transform: rotate(-25deg);
+  }
+  40%,
+  80% {
+    transform: rotate(10deg);
+  }
+}
+@media (max-width: 500px) {
+  .githubCorner:hover .octoArm {
+    animation: none;
+  }
+  .githubCorner .octoArm {
+    animation: octocat-wave 560ms ease-in-out;
+  }
 }

@@ -1,11 +1,12 @@
 import { ComponentType, IDragTargetItem } from '@/packages/types';
-import { Button, Modal, Spin } from 'antd';
-import { forwardRef, memo, useEffect, useImperativeHandle, useState } from 'react';
+import { Modal, Spin, Button } from 'antd';
+import React, { forwardRef, memo, useEffect, useImperativeHandle, useState } from 'react';
 import { useDrop } from 'react-dnd';
-import * as Components from '@/packages/index';
+import { getComponent } from '@/packages/index';
 import MarsRender from '@/packages/MarsRender/MarsRender';
 import { usePageStore } from '@/stores/pageStore';
-import './index.less';
+import * as icons from '@ant-design/icons';
+import { handleActionFlow } from '@/packages/utils/action';
 
 /**
  *
@@ -17,14 +18,17 @@ const AntdModal = forwardRef(({ id, type, config, elements, onLoad, onOk, onCanc
   const [visible, setVisible] = useState(false);
   const [confirmLoading, setConfirmLoading] = useState(config.props.confirmLoading || false);
   const [loading, setLoading] = useState(false);
-  const { mode, addChildElements } = usePageStore((state) => ({ mode: state.mode, addChildElements: state.addChildElements }));
+  const { addChildElements, setSelectedElement } = usePageStore((state) => ({
+    addChildElements: state.addChildElements,
+    setSelectedElement: state.setSelectedElement,
+  }));
   // 拖拽接收
   const [, drop] = useDrop({
     accept: 'MENU_ITEM',
-    drop(item: IDragTargetItem, monitor) {
+    async drop(item: IDragTargetItem, monitor) {
       if (monitor.didDrop()) return;
       // 生成默认配置
-      const { config, events, methods = [] }: any = Components[(item.type + 'Config') as keyof typeof Components] || {};
+      const { config, events, methods = [] }: any = (await getComponent(item.type + 'Config'))?.default || {};
       addChildElements({
         type: item.type,
         name: item.name,
@@ -54,10 +58,14 @@ const AntdModal = forwardRef(({ id, type, config, elements, onLoad, onOk, onCanc
         // 打开弹框
         open: () => {
           return new Promise((resolve) => {
-            setVisible(() => {
+            setVisible(true);
+            setTimeout(() => {
               resolve(true);
-              return true;
-            });
+              setSelectedElement({
+                id,
+                type,
+              });
+            }, 0);
           });
         },
         // 显示确认Loading
@@ -97,6 +105,9 @@ const AntdModal = forwardRef(({ id, type, config, elements, onLoad, onOk, onCanc
     onCancel?.();
     // 取消事件
     setVisible(false);
+    setTimeout(() => {
+      setSelectedElement(undefined);
+    }, 0);
   };
   /**
    * 开发模式下处理弹框根样式
@@ -108,26 +119,46 @@ const AntdModal = forwardRef(({ id, type, config, elements, onLoad, onOk, onCanc
   } else if (modal) {
     modal.style.display = 'none';
   }
+
+  const handleOperate = (eventName: string) => {
+    const btnEvent = config.events.find((event) => event.eventName === eventName);
+    handleActionFlow(btnEvent?.actions, {});
+  };
+
+  const bulkActionList = config.props.bulkActionList || [];
+  const iconsList: { [key: string]: any } = icons;
   return (
     <>
-      {/* 虚拟一个按钮，来模拟弹框，生产模式下，需要删除 */}
-      {mode === 'edit' ? (
-        <div>
-          <Button onClick={() => setVisible(true)}>{config.props.title}</Button>
-        </div>
-      ) : null}
       <Modal
         {...config.props}
         data-id={id}
         data-type={type}
         open={visible}
-        footer={config.props.footer ? undefined : null}
         getContainer={false}
         onOk={handleOk}
         maskClosable={false}
         onCancel={handleCancel}
         width={config.props.width || undefined}
         confirmLoading={confirmLoading}
+        footer={
+          bulkActionList.length > 0 ? (
+            <>
+              {bulkActionList.map((item: any, index: number) => {
+                return (
+                  <Button
+                    key={item.eventName}
+                    type={item.type}
+                    danger={item.danger}
+                    icon={item.icon ? React.createElement(iconsList[item.icon]) : null}
+                    onClick={() => handleOperate(item.eventName)}
+                  >
+                    {item.text}
+                  </Button>
+                );
+              })}
+            </>
+          ) : undefined
+        }
         style={{ ...config.style }}
       >
         <div ref={drop}>

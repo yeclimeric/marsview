@@ -14,10 +14,17 @@ export default defineConfig({
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
+    proxy: {
+      '/api': {
+        target: 'http://mars-api.marsview.cc',
+        changeOrigin: true,
+      },
+    },
   },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      '@materials': path.resolve(__dirname, './../materials'),
     },
   },
   css: {

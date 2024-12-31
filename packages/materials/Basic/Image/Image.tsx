@@ -1,4 +1,4 @@
-import { ComponentType } from '../../types';
+import { ComponentType } from '@materials/types';
 import { Image } from 'antd';
 import { useState, useImperativeHandle, forwardRef } from 'react';
 
@@ -8,7 +8,7 @@ import { useState, useImperativeHandle, forwardRef } from 'react';
  * @param style 组件样式
  * @returns
  */
-const MImage = ({ config }: ComponentType, ref: any) => {
+const MImage = ({ config, onClick }: ComponentType, ref: any) => {
   const [visible, setVisible] = useState(true);
   // 对外暴露方法
   useImperativeHandle(ref, () => {
@@ -21,6 +21,9 @@ const MImage = ({ config }: ComponentType, ref: any) => {
       },
     };
   });
-  return visible && <Image style={config.style} {...config.props} />;
+  const handleClick = () => {
+    onClick?.();
+  };
+  return visible && <Image style={config.style} {...config.props} onClick={handleClick} />;
 };
 export default forwardRef(MImage);

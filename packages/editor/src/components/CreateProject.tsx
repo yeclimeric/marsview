@@ -1,19 +1,20 @@
-import { Input, Modal, Form, Radio } from 'antd';
-import { useImperativeHandle, useState, forwardRef, useMemo, memo } from 'react';
-import { addProject } from '@/api';
+import { Input, Modal, Form, Button } from 'antd';
+import { useImperativeHandle, useState, forwardRef, memo } from 'react';
+import api from '@/api/project';
 import UploadImages from './UploadImages/UploadImages';
 import { message } from '@/utils/AntdGlobal';
+import TextArea from 'antd/es/input/TextArea';
 
 /**
  * 创建项目
  */
-const CreateProject = (props: { update: () => void }, ref: any) => {
+const CreateProject = (props: { createRef: any; update?: () => void }, ref: any) => {
   const [form] = Form.useForm();
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // 暴露方法
-  useImperativeHandle(ref, () => ({
+  useImperativeHandle(props.createRef, () => ({
     open() {
       form.resetFields();
       setVisible(true);
@@ -26,9 +27,9 @@ const CreateProject = (props: { update: () => void }, ref: any) => {
       await form.validateFields();
       const values = form.getFieldsValue();
       setLoading(true);
-      await addProject({ ...initValue, ...values });
-      message.success('创建成功');
-      props.update();
+      await api.addProject({ ...values });
+      message.success('项目初始化成功');
+      props.update?.();
       setLoading(false);
       setVisible(false);
     } catch (error) {
@@ -41,46 +42,28 @@ const CreateProject = (props: { update: () => void }, ref: any) => {
     form.resetFields();
     setVisible(false);
   };
-
-  const initValue = useMemo(() => {
-    return {
-      layout: 1,
-      menu_mode: 'inline',
-      menu_theme_color: 'dark',
-      system_theme_color: '#1677ff',
-      breadcrumb: true,
-      tag: true,
-      footer: false,
-      logo: 'https://marsview.cdn.bcebos.com/mars-logo.png',
-      is_public: 1,
-    };
-  }, []);
   return (
-    <Modal
-      title="创建项目"
-      open={visible}
-      confirmLoading={loading}
-      onOk={handleOk}
-      onCancel={handleCancel}
-      width={600}
-      okText="确定"
-      cancelText="取消"
-    >
-      <Form form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 16 }} initialValues={initValue}>
+    <Modal title="初始项目信息" open={visible} confirmLoading={loading} onCancel={handleCancel} width={500} footer={null}>
+      <Form
+        layout="vertical"
+        form={form}
+        labelCol={{ span: 5 }}
+        wrapperCol={{ span: 24 }}
+        initialValues={{ logo: 'https://marsview.cdn.bcebos.com/mars-logo.png' }}
+      >
         <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入页面名称' }]}>
           <Input placeholder="请输入项目名称" maxLength={15} showCount />
         </Form.Item>
-        <Form.Item label="描述" name="remark" rules={[{ required: true, message: '请输入项目描述' }]}>
-          <Input placeholder="请输入项目描述" maxLength={20} showCount />
+        <Form.Item label="描述" name="remark" rules={[{ required: true, message: '请输入描述' }]}>
+          <TextArea autoSize={{ minRows: 4, maxRows: 6 }} placeholder="请输入描述" maxLength={100} showCount />
         </Form.Item>
-        <Form.Item label="LOGO" name="logo" rules={[{ required: true, message: '请上传项目Logo' }]}>
+        <Form.Item label="图标" name="logo" rules={[{ required: true, message: '请上传项目Logo' }]}>
           <UploadImages />
         </Form.Item>
-        <Form.Item label="权限" name="is_public" rules={[{ required: true, message: '请选择访问类型' }]} extra="公开项目支持所有人访问，但不可修改。">
-          <Radio.Group>
-            <Radio value={1}>公开</Radio>
-            <Radio value={2}>私有</Radio>
-          </Radio.Group>
+        <Form.Item>
+          <Button block type="primary" onClick={handleOk} loading={loading}>
+            快速初始化
+          </Button>
         </Form.Item>
       </Form>
     </Modal>

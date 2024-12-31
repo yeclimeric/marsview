@@ -1,8 +1,8 @@
-import { ComponentType } from '../../types';
+import { ComponentType } from '@materials/types';
 import { Steps } from 'antd';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { handleApi } from '../../utils/handleApi';
-import { usePageStore } from '../../stores/pageStore';
+import { handleApi } from '@materials/utils/handleApi';
+import { usePageStore } from '@materials/stores/pageStore';
 
 /*泛型只需要定义组件本身用到的属性*/
 export interface IConfig {
@@ -21,7 +21,7 @@ const MSteps = ({ id, type, config, onChange }: ComponentType<IConfig>, ref: any
   const [visible, setVisible] = useState(true);
   const [current, setCurrent] = useState(config.props.current || 0);
   const [data, setData] = useState<Array<{ title: string; description: string; subTitle: string }>>([]);
-  const variableData = usePageStore((state) => state.page.variableData);
+  const variableData = usePageStore((state) => state.page.pageData.variableData);
   useEffect(() => {
     setCurrent(config.props.current);
   }, [config.props.current]);

@@ -7,102 +7,62 @@
   overflow: auto;
   display: flex;
   flex-direction: column;
-
   .pagesContent {
     flex: 1;
   }
 }
-.card {
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 0 20px;
-  box-sizing: border-box;
-  transition: box-shadow 0.2s linear;
-  &:hover {
-    box-shadow: 0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09);
+.pageList,
+.libList {
+  :global {
+    .ant-card {
+      transition: all 0.3s;
+      &:hover {
+        border-color: #7d3fff;
+        box-shadow: 0 4px 10px 0 rgba(0, 0, 0, 0.1);
+      }
+    }
   }
 }
-.itemContent {
-  position: relative;
-  height: 111px;
+.cardBody {
   cursor: pointer;
 }
-.itemHeader {
-  margin-top: 10px;
-  text-align: right;
-  margin-right: -8px;
+.itemEnv {
+  position: absolute;
+  top: 8px;
+  right: 0px;
 }
 .itemTitle {
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .itemRemark {
   font-size: 14px;
   margin-top: 8px;
-  margin-bottom: 5px;
-  color: rgba(0, 0, 0, 0.88);
+  margin-bottom: 10px;
+  color: var(--mars-theme-text-secondary-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .updateUser {
   font-size: 13px;
   color: #9c9a9a;
 }
-.itemFooter {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  border-top: 1px solid #f0f0f0;
-  font-size: 20px;
-  padding: 10px;
-  :global {
-    .anticon {
-      color: #454343;
-      &:hover {
-        cursor: pointer;
-        color: #7d33ff;
-      }
-    }
-  }
-}
-.project {
+
+.project,
+.pageList,
+.libList {
   :global {
     .ant-card-body {
       padding-inline: 12px;
-      padding-bottom: 12px;
+      padding-bottom: 6px;
     }
-    .ant-card-actions {
-      background: none;
+    .ant-card-actions li {
+      margin: 8px 0;
     }
-  }
-}
-.project,
-.workflow {
-  .projectList {
-    flex: 1;
-  }
-  .projectCard {
-    &:hover {
-      .delIcon {
-        visibility: visible;
-        color: red;
-      }
-    }
-  }
-  :global {
-    .unlock {
-      display: none;
-    }
-    .lock {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-    }
-  }
-  .delIcon {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    visibility: hidden;
-    transition: all 0.3s;
   }
 }
 // 组件库
@@ -112,25 +72,10 @@
     margin-top: 30px;
     margin-bottom: 50px;
   }
-  .item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-inline: 10px;
-    border-bottom: 1px solid @border-color;
-    height: 110px;
-    .itemInfo {
-      .remark {
-        color: #505052;
-      }
-      p {
-        line-height: 30px;
-        color: #0006;
-      }
-    }
-  }
   .libList {
-    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
   }
 }
 // 模板页面

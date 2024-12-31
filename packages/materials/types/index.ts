@@ -35,10 +35,10 @@ export type ComItemType = Pick<ComponentType, 'id' | 'type' | 'name' | 'parentId
  * @param {events} api 组件自带的事件
  * @param {elements} elements 子组件
  */
-export interface ComponentType<T = any> {
+export type ComponentType<T = any> = {
   id: string;
   type: string;
-  name: string;
+  name: string | number;
   remoteUrl?: string;
   remoteConfigUrl?: string;
   remoteCssUrl?: string;
@@ -50,8 +50,11 @@ export interface ComponentType<T = any> {
   methods: ComponentMethodType[];
   apis: { [key: string]: ApiType };
   elements: ComponentType<T>[];
-  [key: string]: any; // 自定义属性，比如事件函数挂载
-}
+} & OnProps<string>;
+
+type OnProps<TKeys extends string> = {
+  [P in `on${TKeys}` as `on${TKeys}`]: (data?: any) => void;
+};
 
 /**
  * 组件配置类型
@@ -64,7 +67,6 @@ export interface ConfigType<T = any> {
   events: EventType[]; //事件配置
   // 接口配置
   api: ApiConfig;
-  source: any; // 数据源
 }
 
 /**
@@ -74,12 +76,7 @@ export interface ApiConfig {
   sourceType: 'json' | 'api' | 'variable' | 'download';
   id: string;
   source: any;
-  sourceField:
-    | string
-    | {
-        type: 'variable' | 'static';
-        value: string;
-      };
+  sourceField: string | { type: 'variable' | 'static'; value: string };
   name?: {
     type: 'variable' | 'static';
     value: string;
@@ -191,11 +188,11 @@ export interface ApiType {
   stgApi: string;
   preApi: string;
   prdApi: string;
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE';
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   sourceType?: string; //数据源类型，枚举值
   // 静态数据源映射
   source: any;
-  // 数据源映射，比如：{ code: { list: [] } }，这里sourceField: 'list'
+  // 数据源映射，比如：{ code: { list: [] } }，这里sourceField: 'data.list'
   sourceField: string;
   contentType: string;
   baseApi?: string;
@@ -215,6 +212,7 @@ export interface ApiType {
   tips?: {
     success: string;
     fail: string;
+    isSuccess: boolean; // 是否开启系统成功提示
     isError: boolean; // 是否开启系统错误提示
   };
 }

@@ -1,10 +1,10 @@
 import { Form, FormItemProps, RadioProps, Checkbox } from 'antd';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
-import { ComponentType } from '../../types';
-import { handleApi } from '../../utils/handleApi';
-import { isNotEmpty, isNull } from '../../utils/util';
-import { useFormContext } from '../../utils/context';
-import { usePageStore } from '../../stores/pageStore';
+import { ComponentType } from '@materials/types';
+import { handleApi } from '@materials/utils/handleApi';
+import { isNotEmpty, isNull } from '@materials/utils/util';
+import { useFormContext } from '@materials/utils/context';
+import { usePageStore } from '@materials/stores/pageStore';
 
 /* 泛型只需要定义组件本身用到的属性，当然也可以不定义，默认为any */
 export interface IConfig {
@@ -23,25 +23,26 @@ export interface IConfig {
  * @param props 系统属性值：componentid、componentname等
  * @returns 返回组件
  */
-const MCheckBox = ({ config, onChange }: ComponentType<IConfig>, ref: any) => {
+const MCheckBox = ({ type, config, onChange }: ComponentType<IConfig>, ref: any) => {
   const [data, setData] = useState<Array<{ label: string; value: any }>>([]);
   const [visible, setVisible] = useState(true);
-  const [disabled, setDisabled] = useState(false);
-  const { form, formId, setFormData } = useFormContext();
-  const variableData = usePageStore((state) => state.page.variableData);
-  // 初始化默认值
+  const [disabled, setDisabled] = useState<boolean | undefined>();
+  const { initValues } = useFormContext();
+  const variableData = usePageStore((state) => state.page.pageData.variableData);
+
+  /**
+   * 初始化默认值
+   * 此处需要注意：默认值可能是一个数组，必须比对字符串，否则会出现死循环
+   */
   useEffect(() => {
     const name: string = config.props.formItem?.name;
     const value = config.props.defaultValue || [];
-    if (name && !isNull(value)) {
-      form?.setFieldValue(name, value);
-      setFormData({ name: formId, value: { [name]: value } });
-    }
-  }, [config.props.defaultValue]);
+    initValues(type, name, value);
+  }, [JSON.stringify(config.props.defaultValue)]);
 
   // 启用和禁用
   useEffect(() => {
-    setDisabled(config.props.formWrap.disabled || false);
+    if (typeof config.props.formWrap.disabled === 'boolean') setDisabled(config.props.formWrap.disabled);
   }, [config.props.formWrap.disabled]);
 
   useEffect(() => {

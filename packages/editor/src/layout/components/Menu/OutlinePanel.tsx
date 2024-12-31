@@ -12,8 +12,8 @@ import { getElement } from '@/utils/util';
 const OutlinePanel = memo(() => {
   const { pageName, elements, selectedEl, setSelectedElement, dragSortElements } = usePageStore(
     useShallow((state) => ({
-      pageName: state.page.pageName,
-      elements: state.page.elements,
+      pageName: state.page.name,
+      elements: state.page.pageData.elements,
       selectedEl: state.selectedElement,
       setSelectedElement: state.setSelectedElement,
       dragSortElements: state.dragSortElements,
@@ -59,7 +59,6 @@ const OutlinePanel = memo(() => {
 
   // 拖拽排序
   const onDrop = (info: any) => {
-    console.log(info);
     const { key: dragKey, type: dragType, name, elements: dragChildren } = info.dragNode;
     const { key: dropKey } = info.node;
     const dropPos = info.node.pos.split('-');
@@ -79,6 +78,7 @@ const OutlinePanel = memo(() => {
       name,
       elements: dragChildren,
     };
+    let parentId = null;
     // 移动到组件里面，添加为子组件
     if (!info.dropToGap) {
       if (dropKey == 'page') {
@@ -86,19 +86,22 @@ const OutlinePanel = memo(() => {
       } else {
         const { element } = getElement(list, dropKey);
         if (element) {
+          parentId = dropKey;
           element.elements = element.elements || [];
-          element.elements.unshift(dropItem);
+          element.elements.unshift({ ...dropItem, parentId: dropKey });
         }
       }
     } else {
       const { index, elements } = getElement(list, dropKey) || { item: {}, index: 0 };
+      parentId = elements[index].parentId;
       if (dropPosition === -1) {
-        elements?.splice(index, 0, dropItem);
+        elements?.splice(index, 0, { ...dropItem, parentId });
       } else {
-        elements?.splice(index + 1, 0, dropItem);
+        elements?.splice(index + 1, 0, { ...dropItem, parentId });
       }
     }
-    dragSortElements(list);
+    dragSortElements({ id: dragKey, list, parentId });
+    setSelectedKeys([]);
   };
 
   return (
@@ -113,6 +116,7 @@ const OutlinePanel = memo(() => {
         selectedKeys={selectedKeys}
         onSelect={handleSelect}
         onDrop={onDrop}
+        style={{ width: '100%' }}
       />
     </Row>
   );

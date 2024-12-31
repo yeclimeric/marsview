@@ -1,10 +1,10 @@
 import { ComponentType } from '@/packages/types';
 import { Form, FormItemProps, SelectProps, TreeSelect } from 'antd';
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, memo, useEffect, useImperativeHandle, useState } from 'react';
 import { handleApi } from '@/packages/utils/handleApi';
-import { isNull } from '@/packages/utils/util';
 import { useFormContext } from '@/packages/utils/context';
 import { usePageStore } from '@/stores/pageStore';
+import { useShallow } from 'zustand/react/shallow';
 
 /* 泛型只需要定义组件本身用到的属性，当然也可以不定义，默认为any */
 export interface IConfig {
@@ -24,25 +24,21 @@ export interface IConfig {
  * @returns 返回组件
  */
 const MTreeSelect = ({ id, type, config, onChange }: ComponentType<IConfig>, ref: any) => {
-  const { form, formId, setFormData } = useFormContext();
+  const { initValues } = useFormContext();
   const [data, setData] = useState<Array<{ label: string; value: any }>>([]);
   const [visible, setVisible] = useState(true);
-  const [disabled, setDisabled] = useState(false);
-  const variableData = usePageStore((state) => state.page.variableData);
+  const [disabled, setDisabled] = useState<boolean | undefined>();
+  const variableData = usePageStore(useShallow((state) => state.page.pageData.variableData));
   // 初始化默认值
   useEffect(() => {
     const name: string = config.props.formItem?.name;
     const value = config.props.defaultValue;
-    // 日期组件初始化值
-    if (name && !isNull(value)) {
-      form?.setFieldValue(name, value);
-      setFormData({ name: formId, value: { [name]: value } });
-    }
+    initValues(type, name, value);
   }, [config.props.defaultValue]);
 
   // 启用和禁用
   useEffect(() => {
-    setDisabled(config.props.formWrap.disabled || false);
+    if (typeof config.props.formWrap.disabled === 'boolean') setDisabled(config.props.formWrap.disabled);
   }, [config.props.formWrap.disabled]);
 
   useEffect(() => {
@@ -106,4 +102,4 @@ const MTreeSelect = ({ id, type, config, onChange }: ComponentType<IConfig>, ref
     )
   );
 };
-export default forwardRef(MTreeSelect);
+export default memo(forwardRef(MTreeSelect));

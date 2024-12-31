@@ -26,22 +26,23 @@ export interface IConfig {
 const MCheckBox = ({ id, type, config, onChange }: ComponentType<IConfig>, ref: any) => {
   const [data, setData] = useState<Array<{ label: string; value: any }>>([]);
   const [visible, setVisible] = useState(true);
-  const [disabled, setDisabled] = useState(false);
-  const { form, formId, setFormData } = useFormContext();
-  const variableData = usePageStore((state) => state.page.variableData);
-  // 初始化默认值
+  const [disabled, setDisabled] = useState<boolean | undefined>();
+  const { initValues } = useFormContext();
+  const variableData = usePageStore((state) => state.page.pageData.variableData);
+
+  /**
+   * 初始化默认值
+   * 此处需要注意：默认值可能是一个数组，必须比对字符串，否则会出现死循环
+   */
   useEffect(() => {
     const name: string = config.props.formItem?.name;
     const value = config.props.defaultValue || [];
-    if (name && !isNull(value)) {
-      form?.setFieldValue(name, value);
-      setFormData({ name: formId, value: { [name]: value } });
-    }
-  }, [config.props.defaultValue]);
+    initValues(type, name, value);
+  }, [JSON.stringify(config.props.defaultValue)]);
 
   // 启用和禁用
   useEffect(() => {
-    setDisabled(config.props.formWrap.disabled || false);
+    if (typeof config.props.formWrap.disabled === 'boolean') setDisabled(config.props.formWrap.disabled);
   }, [config.props.formWrap.disabled]);
 
   useEffect(() => {

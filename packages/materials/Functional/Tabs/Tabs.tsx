@@ -2,9 +2,9 @@ import React, { forwardRef, useImperativeHandle, useState } from 'react';
 import { Tabs } from 'antd';
 import type { TabsProps } from 'antd';
 import * as icons from '@ant-design/icons';
-import { usePageStore } from '../../stores/pageStore';
-import { ComponentType } from '../../types';
-import MarsRender from '../../MarsRender/MarsRender';
+import { usePageStore } from '@materials/stores/pageStore';
+import { ComponentType } from '@materials/types';
+import MarsRender from '@materials/MarsRender/MarsRender';
 /**
  *
  * @param props 组件本身属性
@@ -16,7 +16,7 @@ const MTabs = ({ config, elements, onTabClick, onChange }: ComponentType<TabsPro
 
   const { elementsMap } = usePageStore((state) => {
     return {
-      elementsMap: state.page.elementsMap,
+      elementsMap: state.page.pageData.elementsMap,
     };
   });
 

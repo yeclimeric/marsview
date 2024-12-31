@@ -1,7 +1,7 @@
 import { Tabs, Layout, Form, Input, DatePicker, Button, Table, Badge, Modal } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useState, useEffect } from 'react';
-import { getPageDetail, publishList, rollbackPage } from '@/api';
+import api from '@/api/page';
 import { useParams } from 'react-router-dom';
 import SearchForm from '../admin/components/SearchForm';
 import { message } from '@/utils/AntdGlobal';
@@ -26,12 +26,12 @@ const items: Array<{ key: EnvType; label: string }> = [
 interface HistoryItem {
   id: number;
   env: EnvType;
-  page_id: number;
+  pageId: number;
   page_name: string;
-  page_data: string;
-  user_name: string;
-  created_at: string;
-  updated_at: string;
+  pageData: string;
+  userName: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /**
@@ -65,8 +65,8 @@ export default function PublishHistory() {
     },
     {
       title: '操作人',
-      dataIndex: 'user_name',
-      key: 'user_name',
+      dataIndex: 'userName',
+      key: 'userName',
     },
     {
       title: '版本ID',
@@ -75,11 +75,11 @@ export default function PublishHistory() {
     },
     {
       title: '页面数据',
-      key: 'page_data',
+      key: 'pageData',
       align: 'center',
       render(_, record) {
         return (
-          <Button type="link" onClick={() => handleView(record.page_data)}>
+          <Button type="link" onClick={() => handleView(record.pageData)}>
             查看页面数据
           </Button>
         );
@@ -87,8 +87,8 @@ export default function PublishHistory() {
     },
     {
       title: '发布时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
     },
     {
       title: '操作',
@@ -134,12 +134,12 @@ export default function PublishHistory() {
       // 查询当前页面发布历史记录
       const { name, date } = form.getFieldsValue();
       const [start, end] = date || [];
-      const res = await publishList({
+      const res = await api.publishList({
         pageNum: pagination.current,
         pageSize: pagination.pageSize,
         env: activeKey,
-        page_id: parseInt(id),
-        publish_user_id: name,
+        pageId: parseInt(id),
+        userName: name,
         start,
         end,
       });
@@ -159,11 +159,11 @@ export default function PublishHistory() {
 
   // 获取当前页面发布的版本
   async function getReleaseVersion() {
-    const res = await getPageDetail(parseInt(id));
+    const res = await api.getPageDetail(parseInt(id));
     setLastPublish({
-      stg: res.stg_publish_id,
-      pre: res.pre_publish_id,
-      prd: res.prd_publish_id,
+      stg: res.stgPublishId,
+      pre: res.prePublishId,
+      prd: res.prdPublishId,
     });
   }
 
@@ -182,10 +182,10 @@ export default function PublishHistory() {
 
   // 页面回滚
   async function rollback(item: HistoryItem) {
-    await rollbackPage({
-      page_id: item.page_id,
+    await api.rollbackPage({
+      pageId: item.pageId,
       env: activeKey,
-      last_publish_id: item.id,
+      lastPublishId: item.id,
     });
     message.success('操作成功');
     getReleaseVersion();
@@ -212,7 +212,7 @@ export default function PublishHistory() {
   return (
     <div>
       <Layout.Content className={style.publishHistoryList}>
-        <Tabs size="middle" className={style.envTab} defaultActiveKey="1" items={items} onChange={(key) => onTabChange(key as EnvType)}></Tabs>
+        <Tabs size="middle" defaultActiveKey="1" items={items} onChange={(key) => onTabChange(key as EnvType)}></Tabs>
         <SearchForm form={form} submit={onSearch} style={{ marginBottom: 0 }} initialValues={{ date: [] }}>
           <Form.Item label="用户名" name="name">
             <Input autoComplete="off" placeholder="用户名"></Input>
@@ -222,7 +222,6 @@ export default function PublishHistory() {
           </Form.Item>
         </SearchForm>
         <Table
-          rootClassName={style.historyTable}
           rowKey="id"
           loading={loading}
           scroll={{

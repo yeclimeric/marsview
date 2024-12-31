@@ -1,22 +1,22 @@
-import React, { MouseEvent, useState, useEffect, useRef } from 'react';
-import { useParams, useBlocker } from 'react-router-dom';
-import { ConfigProvider, FloatButton, Image, Popover } from 'antd';
-import { CommentOutlined, InfoCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
+import React, { MouseEvent, useState, useEffect, memo, useMemo } from 'react';
+import { useBlocker, useNavigate, useParams } from 'react-router-dom';
+import { ConfigProvider, theme as AntdTheme, Modal } from 'antd';
 import { useDrop } from 'react-dnd';
 import { useDebounceFn, useKeyPress } from 'ahooks';
-import * as Components from '@/packages/index';
-import { Page } from '@/packages/Page';
+import { getComponent } from '@/packages/index';
 import { IDragTargetItem } from '@/packages/types/index';
-import { createId, getElement } from '@/utils/util';
+import { checkComponentType, createId, getElement } from '@/utils/util';
 import storage from '@/utils/storage';
-import { getPageDetail } from '@/api';
+import api from '@/api/page';
 import Toolbar from '@/components/Toolbar/Toolbar';
-import { message, Modal } from '@/utils/AntdGlobal';
+import { message } from '@/utils/AntdGlobal';
 import { usePageStore } from '@/stores/pageStore';
-import { PageConfig } from '@/packages/Page';
-import InfiniteViewer from 'react-infinite-viewer';
-import './index.less';
-
+import Page from '@/packages/Page/Page';
+import PageConfig from '@/packages/Page/Schema';
+import FloatingCollector from '@/components/FloatingCollector';
+import { handleActionFlow } from '@/packages/utils/action';
+import TopBar from './topbar/TopBar';
+import styles from './index.module.less';
 /**
  * 画布
  * 1. 从左侧拖拽组件到画布中
@@ -26,6 +26,7 @@ const Editor = () => {
   // 页面组件
   const {
     mode,
+    isEdit,
     selectedElement,
     theme,
     elements,
@@ -36,67 +37,87 @@ const Editor = () => {
     setSelectedElement,
     removeElements,
     clearPageInfo,
+    updateEditState,
   } = usePageStore((state) => {
     return {
+      page: state.page,
       mode: state.mode,
+      isEdit: state.isEdit,
       selectedElement: state.selectedElement,
-      theme: state.page.config.props.theme,
-      pageStyle: state.page.config.style,
-      elements: state.page.elements,
-      elementsMap: state.page.elementsMap,
+      theme: state.page.pageData.config.props.theme,
+      elements: state.page.pageData.elements,
+      elementsMap: state.page.pageData.elementsMap,
       savePageInfo: state.savePageInfo,
       addElement: state.addElement,
       addChildElements: state.addChildElements,
       setSelectedElement: state.setSelectedElement,
       removeElements: state.removeElements,
       clearPageInfo: state.clearPageInfo,
+      updateToolbar: state.updateToolbar,
+      updatePageState: state.updatePageState,
+      updateEditState: state.updateEditState,
     };
   });
   // 悬浮组件 - 展示悬浮条
   const [hoverTarget, setHoverTarget] = useState<HTMLElement | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [modalList, setModalList] = useState<any[]>([]);
+  const [drawerList, setDrawerList] = useState<any[]>([]);
+  const [canvasWidth, setCanvasWidth] = useState('auto');
   const { id } = useParams();
-  const viewerRef = useRef<InfiniteViewer>(null);
+  const navigate = useNavigate();
+
+  // 监听页面变动，在路由切换的时候提示未修改
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    return currentLocation.pathname !== nextLocation.pathname;
+  });
+
+  useEffect(() => {
+    if (blocker.state === 'blocked') {
+      if (isEdit) {
+        Modal.confirm({
+          title: '提示',
+          content: '页面有未保存的内容，离开将失去修改内容',
+          onOk: () => {
+            blocker.proceed();
+          },
+          onCancel: () => {
+            blocker.reset();
+          },
+        });
+      } else {
+        blocker.proceed();
+      }
+    }
+  }, [blocker]);
+
   useEffect(() => {
     if (!id) return;
     setLoaded(false);
-    getPageDetail(parseInt(id)).then((res) => {
-      let pageData: any = {};
-      try {
-        pageData = JSON.parse(res.page_data || '{}');
-      } catch (error) {
-        console.error(error);
-        console.info('【json数据】', res.page_data);
-        message.error('页面数据格式错误，请检查');
-      }
-      savePageInfo({
-        config: PageConfig.config,
-        events: PageConfig.events,
-        ...pageData,
-        pageId: res.id,
-        pageName: res.name,
-        remark: res.remark,
-        is_public: res.is_public,
-        is_edit: res.is_edit,
-        preview_img: res.preview_img,
-        stg_publish_id: res.stg_publish_id,
-        pre_publish_id: res.pre_publish_id,
-        prd_publish_id: res.prd_publish_id,
-        stg_state: res.stg_state,
-        pre_state: res.pre_state,
-        prd_state: res.prd_state,
-        user_id: res.user_id,
+    setCanvasWidth(storage.get('canvasWidth') || 'auto');
+    api
+      .getPageDetail(parseInt(id))
+      .then((res) => {
+        let pageData: any = {};
+        try {
+          pageData = res.pageData ? JSON.parse(res.pageData) : { config: PageConfig.config };
+        } catch (error) {
+          pageData = { config: PageConfig.config };
+          console.error(error);
+          console.info('【json数据】', res.pageData);
+          message.error('页面数据格式错误，请检查');
+        }
+
+        savePageInfo({ ...res, pageData });
+        setTimeout(() => {
+          updateEditState(false);
+        }, 100);
+        setLoaded(true);
+      })
+      .catch((res) => {
+        if (res.code === 403) return navigate('/403');
+        if (res.code === 404) return navigate('/404');
       });
-      setLoaded(true);
-      // 设置初始化缩放比例，由于屏幕尺寸是动态的，我们需要动态计算一个最佳的初始化缩放比例值
-      const container = document.querySelector('.mars-editor') as HTMLDivElement;
-      const scale = (container.clientWidth - 50) / 1440;
-      viewerRef.current?.setZoom(scale);
-      // 滚动到画布中心
-      requestAnimationFrame(() => {
-        viewerRef.current?.scrollCenter();
-      });
-    });
     return () => {
       clearPageInfo();
       setHoverTarget(null);
@@ -104,37 +125,36 @@ const Editor = () => {
     };
   }, [id]);
 
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
-    return currentLocation.pathname !== nextLocation.pathname;
-  });
-
-  // 页面返回时，提示用户是否离开
+  // 当页面和用户有交互时，增加刷新和返回提示。
   useEffect(() => {
-    if (blocker.state === 'blocked') {
-      Modal.confirm({
-        title: '确认离开',
-        content: '是否确认离开当前页面？',
-        onOk: () => {
-          blocker.proceed();
-        },
-        onCancel: () => {
-          blocker.reset();
-        },
-      });
-    }
-  }, [blocker]);
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      // Cancel the event as stated by the standard.
+      event.preventDefault();
+      // Chrome requires returnValue to be set.
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
 
   // 拖拽接收
   const [, drop] = useDrop({
     accept: 'MENU_ITEM',
-    drop(item: IDragTargetItem, monitor: any) {
+    async drop(item: IDragTargetItem, monitor: any) {
       // 此处必须检测该组件是否已经被放入完成，如果已经放置到其它容器中，直接返回。
       if (monitor.didDrop()) return;
       // 生成默认配置
-      const { config, events, methods = [], elements = [] }: any = Components[(item.type + 'Config') as keyof typeof Components] || {};
+      const { config, events, methods = [], elements = [] }: any = (await getComponent(item.type + 'Config'))?.default || {};
+
+      if (!checkComponentType(item.type, selectedElement?.id, selectedElement?.type, elementsMap)) {
+        message.info('请把表单项放在Form容器内');
+        return;
+      }
       const childElement =
-        elements.map((child: IDragTargetItem) => {
-          const { config, events, methods = [] }: any = Components[(child.type + 'Config') as keyof typeof Components] || {};
+        elements.map(async (child: IDragTargetItem) => {
+          const { config, events, methods = [] }: any = (await getComponent(child.type + 'Config'))?.default || {};
           return {
             id: createId(child.type),
             name: child.name,
@@ -145,14 +165,16 @@ const Editor = () => {
             methods,
           };
         }) || [];
-      addElement({
-        type: item.type,
-        name: item.name,
-        id: item.id,
-        config,
-        events,
-        methods,
-        elements: childElement,
+      Promise.all(childElement).then((res) => {
+        addElement({
+          type: item.type,
+          name: item.name,
+          id: item.id,
+          config,
+          events,
+          methods,
+          elements: res,
+        });
       });
     },
     collect: (monitor) => ({
@@ -198,13 +220,15 @@ const Editor = () => {
     event.stopPropagation();
   };
 
-  const { run } = useDebounceFn(handleOver, { wait: 150 });
+  // 鼠标悬浮防抖监听
+  const { run: handleRunOver } = useDebounceFn(handleOver, { wait: 300 });
 
   // 键盘快捷复制、删除事件
   useKeyPress(['ctrl.c', 'meta.c'], (event: any) => {
     if (['INPUT', 'TEXTAREA'].includes(event.target.tagName)) return;
     copyElement();
   });
+
   /**
    * 组件复制，需要考虑到嵌套组合情况
    * 1. 单个组件复制
@@ -215,6 +239,7 @@ const Editor = () => {
     if (['INPUT', 'TEXTAREA'].includes(event.target.tagName)) return;
     pastElement();
   });
+
   // 快捷删除
   useKeyPress(['delete', 'backspace'], (event: any) => {
     if (['INPUT', 'TEXTAREA'].includes(event.target.tagName) || event.target.contentEditable === 'true') return;
@@ -250,6 +275,7 @@ const Editor = () => {
       deepCopy(current?.elements || [], newId);
     } else {
       const { element: current } = getElement(elements, id);
+      // 复制元素时，需要从新生成组件ID
       const newId = createId(id.split('_')[0]);
       addChildElements({
         ...elementsMap[id],
@@ -282,77 +308,77 @@ const Editor = () => {
   const delElement = () => {
     if (selectedElement) {
       removeElements(selectedElement.id);
+      if (selectedElement.type === 'Modal' || selectedElement.type === 'Drawer') {
+        handleFloateItemDelete(selectedElement.id);
+      }
     }
   };
 
+  // 自适应时，需要计算画布宽度
+  const editorWidth = useMemo(() => {
+    if (canvasWidth !== 'auto') return '';
+    const editorWidth = document.querySelector('#designer')?.getBoundingClientRect()?.width;
+    return `${editorWidth}px`;
+  }, [canvasWidth]);
+
+  // 浮动组件点击事件
+  const handleFloateItemClick = (item: any) => {
+    handleActionFlow(item.events?.open, null);
+  };
+
+  // 浮动组件关闭事件
+  const handleFloateItemClose = (item: any) => {
+    handleActionFlow(item.events?.close, null);
+  };
+
+  // 浮动组件删除事件, 删除浮动组件, 同时删除页面中的组件
+  const handleFloateItemDelete = (targetId: string) => {
+    setModalList((prev) => prev.filter((item) => item.targetId !== targetId));
+    setDrawerList((prev) => prev.filter((item) => item.targetId !== targetId));
+    removeElements(targetId);
+  };
+
   return (
-    <ConfigProvider
-      theme={{
-        cssVar: true,
-        hashed: false,
-        token: {
-          colorPrimary: theme || '#1677ff',
-          colorLink: theme || '#1677ff',
-          colorInfo: theme || '#1677ff',
-        },
-      }}
-    >
-      <FloatButton.Group trigger="click" type="primary" style={{ insetInlineEnd: 24 }} icon={<InfoCircleOutlined />}>
-        <Popover
-          content={
-            <>
-              <p>1. 强烈建议直接点击左侧组件物料，无需拖拽即可渲染到画布中。</p>
-              <p>2. 添加子组件时，直接选中父组件，点击左侧物料即可填充。</p>
-              <p>3. 画布中的组件支持快捷键：ctrl+c/v 复制和粘贴；Del 删除。</p>
-              <p>4. 表单组件，只能放在Form容器和搜索表单组件中，请勿单独使用。</p>
-              <p>5. 支持接口调用，表单联动、自定义样式、逻辑编排，脚本运行，变量绑定等等。</p>
-              <p>6. 页面支持通过微前端框架集成到自身传统项目中。</p>
-              <p>7. 有任何技术和使用问题，请联系我，24H为你解答。</p>
-            </>
-          }
-          title="使用说明(不建议使用拖拽功能)"
-          placement="left"
+    <div ref={drop} className={styles.designer} onClick={handleClick}>
+      <TopBar updateCanvas={setCanvasWidth} canvasWidth={canvasWidth} />
+      <ConfigProvider
+        theme={{
+          cssVar: true,
+          hashed: false,
+          algorithm: AntdTheme.defaultAlgorithm,
+          token: {
+            colorPrimary: theme || '#1677ff',
+            colorLink: theme || '#1677ff',
+            colorInfo: theme || '#1677ff',
+          },
+        }}
+      >
+        <div
+          id="designer"
+          className={styles['designer-editor']}
+          style={{ height: mode === 'preview' ? 'calc(100vh - 64px)' : 'calc(100vh - 104px)' }}
         >
-          <FloatButton icon={<QuestionCircleOutlined />} />
-        </Popover>
-        <Popover placement="left" title="加我微信" content={<Image width={180} src="https://marsview.cdn.bcebos.com/mywechat.jpg" />}>
-          <FloatButton icon={<CommentOutlined />} />
-        </Popover>
-      </FloatButton.Group>
-      {/* 编辑器 */}
-      <div ref={drop} className={mode === 'edit' ? 'mars-editor' : 'mars-preview'}>
-        {mode === 'edit' ? (
-          <InfiniteViewer
-            className="canvas-viewer dot"
-            displayHorizontalScroll={false}
-            displayVerticalScroll={false}
-            useMouseDrag={true}
-            useWheelScroll={false}
-            useAutoZoom={true}
-            zoomRange={[0.5, 2]}
-            onDragStart={(e) => {
-              const target = e.inputEvent.target;
-              if (target.nodeName === 'A') {
-                e.stop();
-              }
-            }}
-            ref={viewerRef}
+          <div
+            id="editor"
+            className={styles.pageWrapper}
+            style={
+              mode === 'preview'
+                ? { height: 'calc(100vh - 64px)', overflow: 'auto', padding: 0 }
+                : { width: canvasWidth === 'auto' ? editorWidth : canvasWidth }
+            }
+            onMouseOver={handleRunOver}
           >
-            {/* 页面渲染 */}
-            <div id="editor" className="pageWrapper" style={{ width: 1440 }} onClick={handleClick} onMouseOver={run}>
-              {/* 根据选中目标的相对位置，设置工具条 */}
-              {mode === 'edit' && <Toolbar copyElement={copyElement} pastElement={pastElement} delElement={delElement} hoverTarget={hoverTarget} />}
-              <React.Suspense fallback={<div>Loading...</div>}>{loaded && <Page />}</React.Suspense>
-            </div>
-          </InfiniteViewer>
-        ) : (
-          <div id="editor" className="pageWrapper" style={{ height: 'calc(100vh - 64px)', overflow: 'auto' }}>
+            {/* 根据选中目标的相对位置，设置工具条 */}
+            {mode === 'edit' && <Toolbar copyElement={copyElement} pastElement={pastElement} delElement={delElement} hoverTarget={hoverTarget} />}
             <React.Suspense fallback={<div>Loading...</div>}>{loaded && <Page />}</React.Suspense>
           </div>
-        )}
-      </div>
-    </ConfigProvider>
+        </div>
+      </ConfigProvider>
+
+      {/* 弹框收集器 */}
+      {mode === 'edit' && <FloatingCollector />}
+    </div>
   );
 };
 
-export default Editor;
+export default memo(Editor);

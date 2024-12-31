@@ -31,7 +31,7 @@ export interface IConfig {
 const MButton = ({ id, type, config }: ComponentType<IConfig>, ref: any) => {
   const [visible, setVisible] = useState(true);
   const [data, setData] = useState<any[]>([]);
-  const variableData = usePageStore((state) => state.page.variableData);
+  const variableData = usePageStore((state) => state.page.pageData.variableData);
 
   useEffect(() => {
     getDataList({});
@@ -118,8 +118,13 @@ const MButton = ({ id, type, config }: ComponentType<IConfig>, ref: any) => {
         <Button type="link" onClick={() => handleActionClick(item.eventName, record)}>
           {txt.toString()}
         </Button>
+      ) : // 根据item.fontSize设置字体大小，如果为空则默认
+      item.openTooltip ? (
+        <Tooltip title={item.tipContent}>
+          <Typography.Text style={{ fontSize: item.fontSize ? item.fontSize : 14 }}>{txt?.toString()}</Typography.Text>
+        </Tooltip>
       ) : (
-        txt.toString()
+        <Typography.Text style={{ fontSize: item.fontSize ? item.fontSize : 14 }}>{txt?.toString()}</Typography.Text>
       );
     }
     if (item.type === 'image') return <Image src={txt} width={30} />;
@@ -131,7 +136,13 @@ const MButton = ({ id, type, config }: ComponentType<IConfig>, ref: any) => {
       }
       return txt?.toString();
     }
-    return txt;
+    return item.openTooltip ? (
+      <Tooltip title={item.tipContent}>
+        <Typography.Text style={{ fontSize: item.fontSize ? item.fontSize : 14 }}>{txt?.toString()}</Typography.Text>
+      </Tooltip>
+    ) : (
+      <Typography.Text style={{ fontSize: item.fontSize ? item.fontSize : 14 }}>{txt?.toString()}</Typography.Text>
+    );
   };
 
   const items = useMemo(() => {

@@ -38,7 +38,7 @@ export default {
     // 组件默认属性值
     props: {
       text: '打开Marsview系统',
-      href: 'http://www.marsview.cc',
+      href: 'https://www.marsview.com.cn',
       target: '_blank',
     },
     style: {},
@@ -49,7 +49,7 @@ export default {
   // 组件事件
   events: [
     {
-      value: 'handleClick',
+      value: 'onClick',
       name: '点击事件',
     },
   ],

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { Menu } from 'antd';
+import { ConfigProvider, Menu } from 'antd';
 import type { MenuProps, MenuTheme } from 'antd';
-import Icon, * as Icons from '@ant-design/icons';
+import * as Icons from '@ant-design/icons';
 import { useProjectStore } from '@/stores/projectStore';
 import { IMenuItem } from '@/types';
 
@@ -13,7 +13,7 @@ const MenuComponent: React.FC = () => {
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { env, projectId } = useParams();
+  const { projectId } = useParams();
   const { collapsed, menuTree, projectInfo } = useProjectStore();
 
   useEffect(() => {
@@ -31,10 +31,10 @@ const MenuComponent: React.FC = () => {
       if (item.type === 1 && item.status === 1) {
         const iconsList: { [key: string]: any } = Icons;
         if (item.buttons?.length || !item.children) {
-          const path = `/project/${env}/${projectId}/${item.page_id || -item.id}`;
+          const path = `/project/${projectId}/${item.path.startsWith('/') ? item.path.slice(1) : item.path || item.pageId || -item.id}`;
           return treeList.push(getMenuItem(item.name, path, iconsList[item.icon] && React.createElement(iconsList[item.icon])));
         }
-        const path = `/project/${env}/${projectId}/${item.id}`;
+        const path = `${projectId}-${item.id}`;
         treeList.push(
           getMenuItem(item.name, path, iconsList[item.icon] && React.createElement(iconsList[item.icon]), getTreeMenu(item.children || [])),
         );
@@ -68,21 +68,38 @@ const MenuComponent: React.FC = () => {
 
   return (
     <div
-      style={{
-        width: collapsed ? 80 : 255,
-        background: projectInfo.menu_theme_color === 'light' ? '#fff' : '#001529',
-        borderRight: projectInfo.layout === 2 ? '1px solid #e8e9eb' : 'none',
-      }}
+      style={
+        projectInfo.menuMode === 'horizontal'
+          ? { width: 'calc(100vw - 458px)' }
+          : {
+              width: collapsed ? 79 : 255,
+              background: projectInfo.menuThemeColor === 'light' ? '#fff' : '#001529',
+              borderRight: projectInfo.layout === 2 ? '1px solid #e8e9eb' : 'none',
+              overflowX: 'hidden',
+            }
+      }
     >
-      <Menu
-        onClick={onClick}
-        theme={projectInfo.menu_theme_color as MenuTheme}
-        selectedKeys={selectedKeys}
-        style={{ height: 'calc(100vh - 64px)', border: 'none', overflowY: 'auto' }}
-        mode={projectInfo.menu_mode}
-        inlineCollapsed={collapsed}
-        items={menuList}
-      />
+      <ConfigProvider
+        theme={{
+          components: {
+            Menu: {
+              darkItemColor: '#fff',
+              darkItemHoverColor: projectInfo.systemThemeColor,
+              iconSize: 16,
+            },
+          },
+        }}
+      >
+        <Menu
+          onClick={onClick}
+          theme={projectInfo.menuThemeColor as MenuTheme}
+          selectedKeys={selectedKeys}
+          style={projectInfo.menuMode === 'horizontal' ? {} : { height: 'calc(100vh - 64px)', border: 'none', overflowY: 'auto' }}
+          mode={projectInfo.menuMode}
+          inlineCollapsed={projectInfo.menuMode === 'horizontal' ? undefined : collapsed}
+          items={menuList}
+        />
+      </ConfigProvider>
     </div>
   );
 };

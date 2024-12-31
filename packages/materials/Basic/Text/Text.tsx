@@ -1,9 +1,18 @@
+/*
+ * @Author: zq
+ * @Description: 文件说明
+ * @LastEditors: zq
+ * @Company: 沃尔玛
+ * @Date: 2024-12-05 12:43:19
+ * @LastEditTime: 2024-12-05 12:44:05
+ * @FilePath: /lowcode-web/packages/materials/Basic/Text/Text.tsx
+ */
 import { useState, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Typography } from 'antd';
 import dayjs from 'dayjs';
-import { ComponentType } from '../../types';
-import { formatNumber } from '../../utils/util';
-import { message } from '../../utils/AntdGlobal';
+import { ComponentType } from '@materials/types';
+import { formatNumber } from '@materials/utils/util';
+import { message } from '@materials/utils/AntdGlobal';
 import { omit } from 'lodash-es';
 /**
  *
@@ -11,7 +20,7 @@ import { omit } from 'lodash-es';
  * @param style 组件样式
  * @returns
  */
-const MText = ({ config }: ComponentType, ref: any) => {
+const MText = ({ config, onClick }: ComponentType, ref: any) => {
   const [text, setText] = useState('');
   const [visible, setVisible] = useState(true);
   useEffect(() => {
@@ -56,10 +65,12 @@ const MText = ({ config }: ComponentType, ref: any) => {
       },
     };
   });
-
+  const handleClick = () => {
+    onClick?.();
+  };
   return (
     visible && (
-      <Typography.Text style={config.style} {...omit(config.props, ['script', 'text'])}>
+      <Typography.Text style={config.style} {...omit(config.props, ['script', 'text'])} onClick={handleClick}>
         {text}
       </Typography.Text>
     )

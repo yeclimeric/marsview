@@ -24,7 +24,7 @@ instance.interceptors.request.use((config) => {
     timeout = 8,
     timeoutErrorMessage = '请求超时，请稍后重试',
     requestInterceptor,
-  } = usePageStore.getState().page.interceptor || {};
+  } = usePageStore.getState().page.pageData.interceptor || {};
   config.timeout = timeout * 1000;
   config.timeoutErrorMessage = timeoutErrorMessage;
   config.headers = {
@@ -48,7 +48,7 @@ instance.interceptors.request.use((config) => {
 // 响应拦截器
 instance.interceptors.response.use(
   (response) => {
-    const { responseInterceptor } = usePageStore.getState().page.interceptor;
+    const { responseInterceptor } = usePageStore.getState().page.pageData.interceptor;
     // 返回拦截
     let res = response;
     if (responseInterceptor) {
@@ -76,10 +76,13 @@ export default {
     return instance.post(url, params, config);
   },
   put<R = any>(url: string, params: any = {}, config: any = {}): Promise<R> {
-    return instance.post(url, params, config);
+    return instance.put(url, params, config);
+  },
+  patch<R = any>(url: string, params: any = {}, config: any = {}): Promise<R> {
+    return instance.patch(url, params, config);
   },
   delete<R = any>(url: string, config: any = {}): Promise<R> {
-    return instance.get(url, config);
+    return instance.delete(url, config);
   },
   download(url: string, params: any = {}, config: any = {}) {
     return instance.post(url, params, { ...config, responseType: 'blob' }).then((response) => {

@@ -1,6 +1,5 @@
 import React, { Suspense, forwardRef, memo, useEffect, useState } from 'react';
 import { ComItemType, ConfigType } from '@/packages/types/index';
-import * as Components from '@/packages/index';
 import { handleActionFlow } from '@/packages/utils/action';
 import { setComponentRef } from '@/packages/utils/useComponentRefs';
 import { usePageStore } from '@/stores/pageStore';
@@ -8,8 +7,11 @@ import { useShallow } from 'zustand/react/shallow';
 import { produce } from 'immer';
 import dayjs from 'dayjs';
 import * as antd from 'antd';
+import * as Plots from '@ant-design/plots';
+import * as icons from '@ant-design/icons';
 import { isNull, loadStyle, renderFormula } from '@/packages/utils/util';
 import { omit } from 'lodash-es';
+import { getComponent } from '@/packages/index';
 import './index.less';
 
 /**
@@ -34,12 +36,13 @@ export const Material = memo(({ item }: { item: ComItemType }) => {
   const [Component, setComponent] = useState<any>(null);
   const [config, setConfig] = useState<ConfigType>();
 
-  const { elementsMap, variableData, formData } = usePageStore(
+  const { elementsMap, variableData, formData, updateToolbar } = usePageStore(
     useShallow((state) => ({
-      elementsMap: state.page.elementsMap,
-      variables: state.page.variables,
-      variableData: state.page.variableData,
-      formData: state.page.formData,
+      elementsMap: state.page.pageData.elementsMap,
+      variables: state.page.pageData.variables,
+      variableData: state.page.pageData.variableData,
+      formData: state.page.pageData.formData,
+      updateToolbar: state.updateToolbar,
     })),
   );
 
@@ -47,9 +50,12 @@ export const Material = memo(({ item }: { item: ComItemType }) => {
     window.React = window.React || React;
     window.dayjs = window.dayjs || dayjs;
     window.antd = window.antd || antd;
+    window.Plots = window.Plots || Plots;
+    window.icons = window.icons || icons;
   }
 
   useEffect(() => {
+    if (Object.keys(elementsMap).length === 0) return;
     if (elementsMap[item.id].remoteUrl) {
       initContext();
       loadStyle(item.type, elementsMap[item.id].remoteCssUrl as string);
@@ -58,14 +64,17 @@ export const Material = memo(({ item }: { item: ComItemType }) => {
         setComponent(() => {
           return forwardRef(res.default);
         });
+        updateToolbar();
       });
     } else {
-      setComponent(Components[item.type as keyof typeof Components]);
+      setComponent(getComponent(item.type));
+      updateToolbar();
     }
     setConfig(elementsMap[item.id].config);
   }, []);
 
   useEffect(() => {
+    if (Object.keys(elementsMap).length === 0) return;
     setConfig(() => {
       return produce(elementsMap[item.id].config, (draft: ConfigType) => {
         handleFormRegExp(draft);
@@ -146,9 +155,8 @@ export const Material = memo(({ item }: { item: ComItemType }) => {
 
   if (Component && config?.props.showOrHide !== false) {
     return (
-      <Suspense fallback={<antd.Spin spinning={true} tip="加载中..."></antd.Spin>}>
+      <Suspense fallback={<antd.Spin size="default"></antd.Spin>}>
         <Component
-          className={['mars-component']} // 暂时还没用，日后可能会用
           id={item.id}
           type={item.type}
           config={{ ...config, props: { ...omit(config?.props, ['showOrHide']) } }}

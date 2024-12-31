@@ -129,7 +129,10 @@ export default {
       labelAlign: 'right',
       layout: 'horizontal',
       labelCol: {
-        span: 2,
+        span: 6,
+      },
+      wrapperCol: {
+        span: 18,
       },
     },
     // 组件样式

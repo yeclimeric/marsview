@@ -82,6 +82,11 @@ export default {
     },
     {
       type: 'Input',
+      label: '头像地址',
+      name: 'avatar',
+    },
+    {
+      type: 'Input',
       label: '标题',
       name: ['meta', 'title'],
     },
@@ -105,8 +110,8 @@ export default {
         type: 'link',
       },
       meta: {
-        title: '零代码搭建平台',
-        description: '全栈自研、零代码搭建、逻辑编排、权限控制',
+        title: '低代码搭建平台',
+        description: '全栈自研、低代码搭建、逻辑编排、权限控制',
       },
     },
     // 组件样式
@@ -116,6 +121,10 @@ export default {
   events: [
     {
       value: 'onClick',
+      name: '点击卡片事件',
+    },
+    {
+      value: 'onClickMore',
       name: '点击更多事件',
     },
   ],

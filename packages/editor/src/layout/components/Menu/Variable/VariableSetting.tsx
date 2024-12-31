@@ -14,8 +14,9 @@ const VariableSetting = (_: any, ref: any) => {
   const [dataType, setDataType] = useState('string');
   const editorRef = useRef<any>(null);
   const [form] = Form.useForm();
-  const { addVariable, editVariable } = usePageStore((state) => ({
-    variables: state.page.variables,
+  const { theme, addVariable, editVariable } = usePageStore((state) => ({
+    theme: state.theme,
+    variables: state.page.pageData.variables,
     addVariable: state.addVariable,
     editVariable: state.editVariable,
   }));
@@ -23,7 +24,7 @@ const VariableSetting = (_: any, ref: any) => {
   // 初始化monaco，默认为jsdelivery分发，由于网络原因改为本地cdn
   loader.config({
     paths: {
-      vs: 'https://marsview.cdn.bcebos.com/static/monaco-editor/vs',
+      vs: `${import.meta.env.VITE_CDN_URL}/static/monaco-editor/vs`,
     },
   });
 
@@ -91,7 +92,7 @@ const VariableSetting = (_: any, ref: any) => {
             },
           ]}
         >
-          <Input placeholder="请输入变量名称，以字母开头，支持大小写、下划线" maxLength={20} showCount />
+          <Input placeholder="请输入变量名称，以字母开头，支持大小写、下划线" disabled={type == 'edit'} maxLength={20} showCount />
         </Form.Item>
         <Form.Item label="变量类型" name="type" rules={[{ required: true, message: '请选择变量类型' }]}>
           <Radio.Group buttonStyle="solid" onChange={(e) => handleChange(e.target.value)}>
@@ -110,6 +111,7 @@ const VariableSetting = (_: any, ref: any) => {
             <Editor
               height="250px"
               language="json"
+              theme={theme === 'dark' ? 'vs-dark' : 'vs-light'}
               options={{
                 lineNumbers: 'on',
                 minimap: {

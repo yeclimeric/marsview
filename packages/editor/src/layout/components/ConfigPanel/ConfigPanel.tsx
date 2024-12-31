@@ -1,73 +1,98 @@
-import SetterRender from '@/components/SetterRender/SetterRender';
-import { StyleConfig } from '@/components/StyleConfig/StyleConfig';
-import * as Components from '@/packages/index';
+import { Suspense, lazy, memo, useEffect, useState } from 'react';
+import { ConfigProvider, Flex, Form, Tabs } from 'antd';
 import type { TabsProps } from 'antd';
-import { ConfigProvider, Form, Tabs } from 'antd';
-import ApiConfig from '@/components/ApiConfig/ApiConfig';
-import { memo, useEffect, useState } from 'react';
-import EventConfig from '@/components/EventConfig/EventConfig';
-import { useDebounceFn } from 'ahooks';
+import { useDebounceEffect, useDebounceFn } from 'ahooks';
 import { usePageStore } from '@/stores/pageStore';
 import { CheckOutlined, CopyOutlined } from '@ant-design/icons';
 import { message } from '@/utils/AntdGlobal';
 import { defaultsDeep } from 'lodash-es';
 import copy from 'copy-to-clipboard';
+import SpinLoading from '@/components/SpinLoading';
+import { getComponent } from '@/packages/index';
 import styles from './index.module.less';
 
+// 属性设置器
+const SetterRender = lazy(() => import('@/components/SetterRender/SetterRender'));
+// 样式配置
+const StyleConfig = lazy(() => import('@/components/StyleConfig/StyleConfig'));
+// 事件配置
+const EventConfig = lazy(() => import('@/components/EventConfig/EventConfig'));
+// 接口配置
+const ApiConfig = lazy(() => import('@/components/ApiConfig/ApiConfig'));
 /**
  * 生成左侧组件列表
  */
-
 const ConfigPanel = memo(() => {
   const { pageName, pageProps, selectedElement, savePageInfo, elementsMap, editElement } = usePageStore((state) => {
     return {
-      pageName: state.page.pageName,
-      pageProps: state.page.config.props,
+      pageName: state.page.name,
+      pageProps: state.page.pageData.config.props,
       selectedElement: state.selectedElement,
       savePageInfo: state.savePageInfo,
-      elementsMap: state.page.elementsMap,
+      elementsMap: state.page.pageData.elementsMap,
       editElement: state.editElement,
     };
   });
   const [form] = Form.useForm();
   const [isCopy, setCopy] = useState<boolean>(false);
+  const [clientSize, setClientSize] = useState({
+    width: 0,
+    height: 0,
+  });
   const [ComponentConfig, setComponentConfig] = useState<any>(null);
 
+  useDebounceEffect;
   /**
    * 表单初始化
    * 当配置中的输入的值发生变化后，需要再次渲染
    */
-  useEffect(() => {
-    form.resetFields();
-    // 只有选中一个组件，才可以展示属性配置
-    if (selectedElement) {
-      const remoteConfigUrl = elementsMap[selectedElement.id]?.remoteConfigUrl || '';
-      if (remoteConfigUrl) {
-        /* @vite-ignore */
-        import(remoteConfigUrl).then((res = {}) => {
-          setComponentConfig(res.default);
-          form.setFieldsValue(res.default?.config.props || {});
-        });
-      } else {
-        // 生成组件
-        const item: any = Components[(selectedElement.type + 'Config') as keyof typeof Components];
-        setComponentConfig(item);
-        // defaults是为了继承页面中新增的配置项
-        form.setFieldsValue(elementsMap[selectedElement.id]?.config.props);
-      }
-      form.setFieldValue('id', selectedElement.id);
-    } else {
-      // 获取页面配置
-      const item: any = Components['PageConfig' as keyof typeof Components];
-      setComponentConfig(item);
-      // defaults是为了继承页面中新增的配置项
-      form.setFieldsValue({ pageName, ...defaultsDeep({ ...pageProps }, item.config.props) });
-    }
-    return () => {
-      setComponentConfig(null);
+  useDebounceEffect(
+    () => {
       form.resetFields();
-    };
-  }, [selectedElement?.id, pageName]);
+      // 只有选中一个组件，才可以展示属性配置
+      if (selectedElement) {
+        const remoteConfigUrl = elementsMap[selectedElement.id]?.remoteConfigUrl || '';
+        if (remoteConfigUrl) {
+          /* @vite-ignore */
+          import(remoteConfigUrl).then((res = {}) => {
+            setComponentConfig(res.default);
+            form.setFieldsValue(elementsMap[selectedElement.id]?.config.props || {});
+          });
+        } else {
+          // 生成组件
+          getComponent(selectedElement.type + 'Config').then((res: any) => {
+            const item = res.default;
+            setComponentConfig(item);
+            // defaults是为了继承页面中新增的配置项
+            form.setFieldsValue(elementsMap[selectedElement.id]?.config.props);
+          });
+        }
+        form.setFieldValue('id', selectedElement.id);
+        // 获取组件尺寸
+        const target = document.querySelector(`[data-id=${selectedElement?.id}]`);
+        if (target) {
+          const size = target.getBoundingClientRect();
+          setClientSize(size);
+        }
+      } else {
+        // 获取页面配置
+        getComponent('PageConfig').then((res: any) => {
+          const item = res.default;
+          setComponentConfig(item);
+          // defaults是为了继承页面中新增的配置项
+          form.setFieldsValue({ pageName, ...defaultsDeep({ ...pageProps }, item.config.props) });
+        });
+      }
+      return () => {
+        setComponentConfig(null);
+        form.resetFields();
+      };
+    },
+    [selectedElement?.id, pageName],
+    {
+      wait: 300,
+    },
+  );
 
   const { run } = useDebounceFn(
     () => {
@@ -114,31 +139,49 @@ const ConfigPanel = memo(() => {
       children: (
         <Form form={form} style={{ paddingBottom: 20 }} {...formLayout} layout="horizontal" labelAlign="right" onValuesChange={run}>
           <div className={styles.widget}>
-            {selectedElement?.id ? (
-              <span className={styles.text}>组件ID：{selectedElement?.id}</span>
+            {selectedElement?.id ? <span className={styles.text}>组件ID：{selectedElement?.id}</span> : null}
+            {selectedElement?.id && isCopy ? (
+              <CheckOutlined className={styles.ml5} />
             ) : (
-              <span className={styles.text}>页面：{pageName}</span>
+              selectedElement?.id && <CopyOutlined onClick={handleCopy} className={styles.ml5} />
             )}
-            {isCopy ? <CheckOutlined className={styles.ml5} /> : <CopyOutlined onClick={handleCopy} className={styles.ml5} />}
           </div>
-          <SetterRender attrs={ComponentConfig?.attrs || []} form={form} />
+          <Flex justify="space-between" gap={20} className={styles.widget}>
+            <span>宽度: {clientSize.width.toFixed(0)} </span>
+            <span>高度: {clientSize.height.toFixed(0)}</span>
+          </Flex>
+          <Suspense fallback={<SpinLoading />}>
+            <SetterRender attrs={ComponentConfig?.attrs || []} form={form} />
+          </Suspense>
         </Form>
       ),
     },
     {
       key: 'style',
       label: `样式`,
-      children: <StyleConfig />,
+      children: (
+        <Suspense fallback={<SpinLoading />}>
+          <StyleConfig />
+        </Suspense>
+      ),
     },
     {
       key: 'event',
       label: `事件`,
-      children: <EventConfig />,
+      children: (
+        <Suspense fallback={<SpinLoading />}>
+          <EventConfig />
+        </Suspense>
+      ),
     },
     {
       key: 'api',
       label: `数据`,
-      children: <ApiConfig />,
+      children: (
+        <Suspense fallback={<SpinLoading />}>
+          <ApiConfig />
+        </Suspense>
+      ),
     },
   ];
 

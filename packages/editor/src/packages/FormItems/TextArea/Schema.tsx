@@ -26,6 +26,11 @@ export default {
       name: ['defaultValue'],
     },
     {
+      type: 'Switch',
+      label: '无样式',
+      name: ['formItem', 'noStyle'],
+    },
+    {
       type: 'Input',
       label: 'Extra',
       name: ['formItem', 'extra'],
@@ -41,7 +46,19 @@ export default {
       type: 'Title',
       label: '表单配置',
     },
-
+    {
+      type: 'Input',
+      label: '占位提示',
+      name: ['formWrap', 'placeholder'],
+      props: {
+        placeholder: '默认提示',
+      },
+    },
+    {
+      type: 'InputNumber',
+      label: '展示行数',
+      name: ['formWrap', 'rows'],
+    },
     {
       type: 'InputNumber',
       label: '最大长度',
@@ -134,9 +151,7 @@ export default {
       formItem: {
         label: '多行输入框',
         name: 'textarea',
-        labelCol: {
-          offset: -1,
-        },
+        rows: 3,
       },
       // 组件默认属性值
       formWrap: {
@@ -154,10 +169,5 @@ export default {
       name: 'onChange事件',
     },
   ],
-  methods: [
-    {
-      name: 'update',
-      title: '更新数据',
-    },
-  ],
+  methods: [],
 };

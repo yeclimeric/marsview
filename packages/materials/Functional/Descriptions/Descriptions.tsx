@@ -1,10 +1,10 @@
-import { ComponentType } from '../../types';
+import { ComponentType } from '@materials/types';
 import { Button, Descriptions, Image, Tag, Tooltip, Typography } from 'antd';
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from 'react';
-import { handleApi } from '../../utils/handleApi';
-import * as util from '../../utils/util';
-import { handleActionFlow } from '../../utils/action';
-import { usePageStore } from '../../stores/pageStore';
+import { handleApi } from '@materials/utils/handleApi';
+import * as util from '@materials/utils/util';
+import { handleActionFlow } from '@materials/utils/action';
+import { usePageStore } from '@materials/stores/pageStore';
 
 /*泛型只需要定义组件本身用到的属性*/
 export interface IConfig {
@@ -31,7 +31,7 @@ export interface IConfig {
 const MButton = ({ id, type, config }: ComponentType<IConfig>, ref: any) => {
   const [visible, setVisible] = useState(true);
   const [data, setData] = useState<any[]>([]);
-  const variableData = usePageStore((state) => state.page.variableData);
+  const variableData = usePageStore((state) => state.page.pageData.variableData);
 
   useEffect(() => {
     getDataList({});

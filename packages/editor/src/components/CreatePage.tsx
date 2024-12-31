@@ -1,36 +1,61 @@
-import { Input, Modal, Form, Radio } from 'antd';
+import { Input, Modal, Form, Select, Space, Flex, Button } from 'antd';
 import { useImperativeHandle, useState, MutableRefObject } from 'react';
-import { createPageData, updatePageData } from '@/api';
-import { PageItem } from '@/api/pageMember';
+import projectApi from '@/api/project';
+import api from '@/api/page';
+import { CreatePageParams, Project } from '@/api/types';
+import { useSearchParams } from 'react-router-dom';
+import TextArea from 'antd/es/input/TextArea';
 import { usePageStore } from '@/stores/pageStore';
 /**
  * 创建页面
  */
-
+export interface CreatePageRef {
+  open: (action: 'create' | 'edit' | 'copy', record?: CreatePageParams) => void;
+}
 export interface IModalProp {
-  title: string;
-  createRef: MutableRefObject<{ open: (record: PageItem) => void } | undefined>;
-  update?: () => void;
+  createRef: MutableRefObject<{ open: (action: 'create' | 'edit' | 'copy', record?: CreatePageParams) => void } | undefined>;
+  update?: (status?: string) => void;
+  copy?: (record: CreatePageParams) => void;
 }
 
 const CreatePage = (props: IModalProp) => {
   const [form] = Form.useForm();
   const [visible, setVisible] = useState(false);
-  const [type, setType] = useState<'create' | 'edit'>('create');
+  const [type, setType] = useState<'create' | 'edit' | 'copy'>('create');
   const [recordId, setRecordId] = useState(0);
   const [loading, setLoading] = useState(false);
-  const userId = usePageStore((store) => store.userInfo.userId);
-
+  const [projectList, setProjectList] = useState<Project.ProjectItem[]>([]);
+  const [searchParams] = useSearchParams();
+  const savePageInfo = usePageStore((state) => state.savePageInfo);
   // 暴露方法
   useImperativeHandle(props.createRef, () => ({
-    open(record?: PageItem) {
-      if (record) {
-        setType('edit');
-        setRecordId(record.id);
+    async open(action: 'create' | 'edit' | 'copy', record?: CreatePageParams) {
+      const { list = [] } = await projectApi.getCategoryList({
+        pageNum: 1,
+        pageSize: 100,
+      });
+      setProjectList(
+        list.map((item: Project.ProjectItem) => {
+          return {
+            name: item.name,
+            id: item.id,
+            logo: item.logo,
+            remark: item.remark,
+          };
+        }),
+      );
+      setType(action);
+      if (action === 'edit') {
+        record && setRecordId(record.id);
         form.setFieldsValue(record);
+      } else if (action === 'copy') {
+        record && setRecordId(record.id);
+        form.setFieldsValue({ ...record, name: `${record?.name}-副本` });
       } else {
+        const projectId = searchParams.get('projectId') || record?.projectId;
         setType('create');
         setRecordId(0);
+        if (projectId) form.setFieldValue('projectId', Number(projectId));
       }
       setVisible(true);
     },
@@ -44,16 +69,27 @@ const CreatePage = (props: IModalProp) => {
       setLoading(true);
       try {
         if (type === 'create') {
-          await createPageData(params);
+          await api.createPageData(params);
+        } else if (type === 'edit') {
+          await api.updatePageData({
+            ...params,
+            id: recordId,
+          });
+          savePageInfo({
+            name: params?.name,
+            remark: params?.remark,
+            projectId: params?.projectId,
+          });
         } else {
-          await updatePageData({
+          await api.copyPageData({
             ...params,
             id: recordId,
           });
         }
         // 编辑器界面 - 左侧菜单修改后刷新
-        props.update?.();
-        handleCancel();
+        props.update?.('success');
+        form.resetFields();
+        setVisible(false);
         setLoading(false);
       } catch (error) {
         setLoading(false);
@@ -65,44 +101,51 @@ const CreatePage = (props: IModalProp) => {
   const handleCancel = () => {
     form.resetFields();
     setVisible(false);
+    props.update?.('cancel');
   };
   return (
     <Modal
-      title={props.title}
+      title={type === 'create' ? '初始页面信息' : type === 'edit' ? '编辑页面' : '复制页面'}
       open={visible}
       confirmLoading={loading}
       onOk={handleOk}
       onCancel={handleCancel}
-      width={600}
+      width={500}
       okText="确定"
       cancelText="取消"
+      footer={type === 'create' ? null : undefined}
     >
-      <Form form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 16 }} initialValues={{ is_public: 1, is_edit: 1 }}>
+      <Form layout="vertical" form={form} labelCol={{ span: 5 }} wrapperCol={{ span: 24 }}>
         <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入页面名称' }]}>
           <Input placeholder="请输入页面名称" maxLength={15} showCount />
         </Form.Item>
         <Form.Item label="描述" name="remark">
-          <Input placeholder="请输入页面描述" maxLength={20} showCount />
+          <TextArea autoSize={{ minRows: 4, maxRows: 6 }} placeholder="请输入描述" maxLength={100} showCount />
         </Form.Item>
-        <Form.Item
-          label="权限"
-          name="is_public"
-          rules={[{ required: true, message: '请选择访问类型' }]}
-          extra="公开页面支持所有人访问。私有页面仅自己可访问。"
-        >
-          <Radio.Group>
-            <Radio value={1}>公开</Radio>
-            <Radio value={2}>私有</Radio>
-            {/* 普通用户暂不开放模板设置 */}
-            {userId == 50 ? <Radio value={3}>公开模板</Radio> : null}
-          </Radio.Group>
+        <Form.Item label="所属项目" name="projectId" rules={[{ required: true, message: '请选择所属项目' }]}>
+          <Select
+            placeholder="请选择所属项目"
+            options={projectList}
+            fieldNames={{ label: 'name', value: 'id' }}
+            optionRender={(option) => (
+              <Space>
+                <img src={option.data.logo} style={{ maxWidth: 50, maxHeight: 50 }} />
+                <Flex vertical>
+                  <span>{option.data.name}</span>
+                  <span>{option.data.remark}</span>
+                </Flex>
+              </Space>
+            )}
+          />
         </Form.Item>
-        <Form.Item label="模式" name="is_edit" rules={[{ required: true, message: '请选择编辑模式' }]} extra="公开后设置他人可查看或编辑；">
-          <Radio.Group>
-            <Radio value={1}>编辑</Radio>
-            <Radio value={2}>查看</Radio>
-          </Radio.Group>
-        </Form.Item>
+
+        {type == 'create' ? (
+          <Form.Item>
+            <Button block type="primary" onClick={handleOk} loading={loading}>
+              快速初始化
+            </Button>
+          </Form.Item>
+        ) : null}
       </Form>
     </Modal>
   );

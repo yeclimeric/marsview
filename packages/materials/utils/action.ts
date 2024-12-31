@@ -8,14 +8,14 @@ import {
   MethodsAction,
   NotificationAction,
   VariableAction,
-} from '../types';
+} from '@materials/types';
 import { getComponentRef } from './useComponentRefs';
 import { handleApi } from './handleApi';
-import { usePageStore } from '../stores/pageStore';
+import { usePageStore } from '@materials/stores/pageStore';
 import { copyText, handleArrayVariable, handleParamVariable, isNotEmpty, renderFormula, renderTemplate } from './util';
-import { Modal, message, notification } from '../utils/AntdGlobal';
+import { Modal, message, notification } from '@materials/utils/AntdGlobal';
 import request from './request';
-import router from './../../admin/src/router/index';
+import router from '../../admin/src/router/index';
 
 // 把工作流转换为链表结构，此算法需要进一步优化。
 function convertArrayToLinkedList(nodes: any, isSuccessBranch = true) {
@@ -158,7 +158,7 @@ const execAction = (node: any, params: any = {}) => {
   try {
     const data = mergeParams(node.action.data, params);
     delete node.action.data;
-    node.action = handleParamVariable(node.action);
+    node.action = handleParamVariable(node.action, params);
     if (node.action.actionType === 'methods') {
       handleMethods(node, data);
     } else if (node.action.actionType === 'showConfirm') {
@@ -288,7 +288,7 @@ async function handleOpenModal({ action, next }: ActionNode<MethodsAction>, data
   const ref = getComponentRef(action.target);
   if (type === 'close') ref.close({ ...data });
   if (type === 'open') await ref.open({ ...data });
-  execAction(next, data);
+  execAction(next?.success || next, data);
 }
 
 /**
@@ -320,7 +320,7 @@ const handleMessage = ({ action, next }: ActionNode<MessageAction>, data: any) =
       duration: action.duration,
     })
     .then(() => {
-      execAction(next, data);
+      execAction(next?.success || next, data);
     });
 };
 
@@ -335,7 +335,7 @@ const handleNotification = ({ action, next }: ActionNode<NotificationAction>, da
     placement: action.placement,
     duration: action.duration,
   });
-  execAction(next, data);
+  execAction(next?.success || next, data);
 };
 
 /**
@@ -344,9 +344,9 @@ const handleNotification = ({ action, next }: ActionNode<NotificationAction>, da
 const handleRequest = async ({ action, next }: ActionNode<ApiConfig>, data: any) => {
   const res = await handleApi(action, data);
   if (res.code === 0) {
-    execAction(next?.success || next, res.data);
+    execAction(next?.success || next, res);
   } else {
-    execAction(next?.fail, res.msg);
+    execAction(next?.fail, res);
   }
 };
 
@@ -356,7 +356,10 @@ const handleRequest = async ({ action, next }: ActionNode<ApiConfig>, data: any)
 const handleJumpLink = async ({ action, next }: ActionNode<JumpLinkAction>, data: any) => {
   const params = new URLSearchParams(data);
   if (action.jumpType === 'route') {
-    const url = `${action.url}${action.url.indexOf('?') > -1 ? '&' : '?'}${params}`;
+    let url = action.url;
+    if (params.size > 0) {
+      url += action.url.indexOf('?') > -1 ? '&' : '?' + params;
+    }
     router.navigate(url);
   } else if (action.jumpType === 'micro') {
     if (!window.microApp) {
@@ -396,7 +399,7 @@ const handleVariable = ({ action, next }: ActionNode<VariableAction>, data: any)
     name: action.name,
     value,
   });
-  execAction(next, data);
+  execAction(next?.success || next, data);
 };
 
 /**
@@ -406,7 +409,7 @@ const handleCopy = async ({ action, next }: ActionNode<CopyAction>, data: any) =
   try {
     const copyContent = renderTemplate(action.content, data || {});
     await copyText(copyContent);
-    execAction(next, data);
+    execAction(next?.success || next, data);
   } catch (error) {
     console.error('执行复制行为：', error);
   }
@@ -417,7 +420,7 @@ const handleCopy = async ({ action, next }: ActionNode<CopyAction>, data: any) =
  */
 const handleSetTimeout = async ({ action, next }: ActionNode<{ duration: number }>, data: any) => {
   setTimeout(() => {
-    execAction(next, data);
+    execAction(next?.success || next, data);
   }, action.duration * 1000);
 };
 
@@ -440,7 +443,7 @@ const handleVisible = async ({ action, next }: ActionNode<{ target: string; show
       ref.hide({ ...data });
     }
   }
-  execAction(next, data);
+  execAction(next?.success || next, data);
 };
 
 /**
@@ -467,7 +470,7 @@ const handleDisable = async (
       ref.enable({ ...data });
     }
   }
-  execAction(next, data);
+  execAction(next?.success || next, data);
 };
 
 /**
@@ -477,7 +480,7 @@ const handleSendMessage = async (
   { action, next }: ActionNode<{ msg_type: string; content: string; template_id: string; receive_id: number }>,
   data: any,
 ) => {
-  const res = await request.post('http://mars-api.marsview.cc/api/robot/sendMessage', { ...action, variables: data });
+  const res = await request.post(`${import.meta.env.VITE_BASE_API}/robot/sendMessage`, { ...action, variables: data });
   if (res.data.code === 0) {
     execAction(next?.success || next, res.data.data);
   } else {
@@ -489,7 +492,7 @@ const handleSendMessage = async (
  * 创建知识库副本
  */
 const handleCreateNode = async ({ action, next }: ActionNode<{ space_id: number; node_token: string; title: string }>, data: any) => {
-  const res = await request.post('http://mars-api.marsview.cc/api/robot/createNode', { ...action, variables: data });
+  const res = await request.post(`${import.meta.env.VITE_BASE_API}/robot/createNode`, { ...action, variables: data });
   if (res.data.code === 0) {
     execAction(next?.success || next, res.data.data);
   } else {

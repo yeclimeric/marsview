@@ -1,10 +1,10 @@
-import { ComponentType } from '../../types';
+import { ComponentType } from '@materials/types';
 import { UploadOutlined, LoadingOutlined, PlusOutlined } from '@ant-design/icons';
 import { Form, Button, Upload } from 'antd';
 import { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import type { GetProp, UploadFile, UploadProps } from 'antd';
-import { uploadImg } from './../../api';
-import { message } from '../../utils/AntdGlobal';
+import { uploadImg } from '@materials/api';
+import { message } from '@materials/utils/AntdGlobal';
 
 /**
  *
@@ -14,7 +14,7 @@ import { message } from '../../utils/AntdGlobal';
  */
 const MUpload = ({ id, type, config }: ComponentType, ref: any) => {
   const [visible, setVisible] = useState(true);
-  const [disabled, setDisabled] = useState(false);
+  const [disabled, setDisabled] = useState<boolean | undefined>();
   // 对外暴露方法
   useImperativeHandle(ref, () => {
     return {
@@ -112,7 +112,7 @@ const UploadFC = ({ config, value, disabled, onChange }: any) => {
       file: options.file as File, // File 对象
     })
       .then((res) => {
-        const { name, url = '' } = res;
+        const { name, url = '' } = res.data.data;
         setLoading(false);
         if (url) {
           const fileObj = { uid: options.file.uid, name, url, status: 'done' };
@@ -153,7 +153,11 @@ const UploadFC = ({ config, value, disabled, onChange }: any) => {
         return null;
       } else {
         // 上传多个文件，需要显示上传按钮
-        return <Button icon={<UploadOutlined />}>{config.props.text}</Button>;
+        return (
+          <Button icon={<UploadOutlined />} loading={loading}>
+            {config.props.text}
+          </Button>
+        );
       }
     } else {
       // 图片卡片类型展示正方形上传
